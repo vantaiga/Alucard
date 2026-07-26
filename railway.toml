@@ -1,8 +1,9 @@
+# railway.toml
 [build]
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "node --max-old-space-size=80 --expose-gc --experimental-vm-modules src/index.js"
+startCommand = "node --max-old-space-size=120 --expose-gc src/index.js"
 restartPolicyType = "ALWAYS"
 restartPolicyMaxRetries = 10
 
@@ -10,10 +11,7 @@ restartPolicyMaxRetries = 10
 mountPath = "/data"
 
 [healthcheck]
-path = "/api/state"
-initialDelaySeconds = 10
+path = "/health"
+initialDelaySeconds = 15
 periodSeconds = 30
 timeoutSeconds = 5
-
-[envVarPreconfigures]
-PORT = "3000"
