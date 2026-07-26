@@ -1,139 +1,202 @@
-// ═══════════════════════════════════════════════════════════════════════════
-// FILE 9: src/db.js
-// SQLite WAL on /data volume. Snapshot export/import. Migration in one click.
-// Data lives on Railway /data forever. Moves to server via snapshot.json.
-// ═══════════════════════════════════════════════════════════════════════════
-import Database from 'better-sqlite3'
-import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
-import { gzipSync, gunzipSync } from 'zlib'
+// src/db.js — REDRAFT: sql.js pure JS, no native compilation, survives Railway free tier
+// Persistence: export to /data/system.db.bin on every write batch
+// Reload: import from /data/system.db.bin on boot
+// Migration: snapshot.json auto-imported if present
+import { createRequire }                      from 'module'
+import { existsSync, mkdirSync, writeFileSync,
+         readFileSync, unlinkSync }            from 'fs'
 
-// Path hierarchy: Railway /data volume → local ./data → create
-const DATA_DIR = existsSync('/data') ? '/data' : (mkdirSync('./data',{recursive:true}), './data')
-const DB_PATH  = `${DATA_DIR}/system.db`
+const require   = createRequire(import.meta.url)
+const initSqlJs = require('sql.js')
 
-let db = null
+// Storage paths
+const DATA_DIR  = existsSync('/data') ? '/data' : (() => { mkdirSync('./data',{recursive:true}); return './data' })()
+const DB_BIN    = `${DATA_DIR}/system.db.bin`
+const SNAP_PATH = existsSync('./snapshot.json') ? './snapshot.json'
+                : existsSync(`${DATA_DIR}/snapshot.json`) ? `${DATA_DIR}/snapshot.json`
+                : null
+
+let SQL = null
+let db  = null
+
+// Periodic flush to disk (every 10s — not on every write, for performance)
+let _dirty = false
+setInterval(() => { if (_dirty) { _flush(); _dirty = false } }, 10000)
+
+function _flush() {
+  try { writeFileSync(DB_BIN, Buffer.from(db.export())) } catch {}
+}
 
 export function getDB() { return db }
 
 export async function initDB() {
-  db = new Database(DB_PATH)
-  db.pragma('journal_mode = WAL')
-  db.pragma('cache_size = -32000')   // 32MB cache
-  db.pragma('synchronous = NORMAL')
-  db.pragma('temp_store = MEMORY')
-  db.pragma('mmap_size = 268435456') // 256MB mmap
+  SQL = await initSqlJs()
 
-  // Schema — C/R: one table covers all strategy types
-  db.exec(`
+  // Load existing DB or create fresh
+  if (existsSync(DB_BIN)) {
+    try {
+      db = new SQL.Database(readFileSync(DB_BIN))
+      console.log(`[DB] Loaded existing database from ${DB_BIN}`)
+    } catch {
+      db = new SQL.Database()
+      console.warn('[DB] Corrupted DB — starting fresh')
+    }
+  } else {
+    db = new SQL.Database()
+    console.log(`[DB] New database created at ${DB_BIN}`)
+  }
+
+  // Schema
+  db.run(`
     CREATE TABLE IF NOT EXISTS executions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      ts INTEGER NOT NULL,
-      strategy TEXT NOT NULL,
-      chain TEXT,
-      profit_usdc REAL DEFAULT 0,
-      flash_amount REAL DEFAULT 0,
-      gas_cost REAL DEFAULT 0,
-      status TEXT DEFAULT 'success',
-      tx_hash TEXT,
-      block_number INTEGER
+      id    INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts    INTEGER NOT NULL,
+      strategy TEXT NOT NULL DEFAULT '',
+      chain    TEXT         DEFAULT '',
+      profit_usdc  REAL     DEFAULT 0,
+      flash_amount REAL     DEFAULT 0,
+      gas_cost     REAL     DEFAULT 0,
+      status       TEXT     DEFAULT 'success',
+      tx_hash      TEXT
     );
     CREATE TABLE IF NOT EXISTS config (
-      key TEXT PRIMARY KEY,
-      val TEXT NOT NULL,
-      updated INTEGER DEFAULT (unixepoch())
+      key  TEXT PRIMARY KEY,
+      val  TEXT NOT NULL,
+      updated INTEGER DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS treasury (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      ts INTEGER NOT NULL,
-      type TEXT NOT NULL,
-      amount REAL NOT NULL,
-      bridge TEXT,
-      recipient TEXT,
-      status TEXT DEFAULT 'pending',
-      reference TEXT
+      id        INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts        INTEGER NOT NULL,
+      type      TEXT NOT NULL DEFAULT 'transfer',
+      amount    REAL NOT NULL DEFAULT 0,
+      bridge    TEXT DEFAULT '',
+      recipient TEXT DEFAULT '',
+      status    TEXT DEFAULT 'pending',
+      reference TEXT DEFAULT ''
+    );
+    CREATE TABLE IF NOT EXISTS overlay_queue (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts          INTEGER NOT NULL,
+      chain       TEXT NOT NULL DEFAULT 'polygon',
+      strategy    TEXT DEFAULT 'rs4',
+      profit_est  REAL NOT NULL DEFAULT 0,
+      flash_amount REAL DEFAULT 0,
+      calldata_hex TEXT,
+      swap_usd    REAL DEFAULT 0,
+      pool_addr   TEXT DEFAULT '',
+      executed    INTEGER DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS sovereign_memory (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      ts INTEGER NOT NULL,
+      id        INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts        INTEGER NOT NULL,
       dimension TEXT NOT NULL,
-      value REAL NOT NULL,
-      source TEXT
+      value     REAL NOT NULL DEFAULT 0,
+      source    TEXT DEFAULT ''
     );
-    CREATE INDEX IF NOT EXISTS idx_exec_ts       ON executions(ts);
-    CREATE INDEX IF NOT EXISTS idx_exec_strategy ON executions(strategy);
-    CREATE INDEX IF NOT EXISTS idx_sovereign_dim ON sovereign_memory(dimension);
   `)
 
-  // Import snapshot if present (migration from Railway → server)
-  const snapPath = existsSync('./snapshot.json') ? './snapshot.json'
-                 : existsSync(`${DATA_DIR}/snapshot.json`) ? `${DATA_DIR}/snapshot.json`
-                 : null
-  if (snapPath) {
+  // Import snapshot if present (Railway → server migration)
+  if (SNAP_PATH) {
     try {
-      const raw  = readFileSync(snapPath)
-      const data = JSON.parse(
-        raw[0] === 0x1f ? gunzipSync(raw).toString() : raw.toString()
-      )
-      importSnapshot(data)
-      unlinkSync(snapPath)
+      const raw  = readFileSync(SNAP_PATH, 'utf8')
+      const data = JSON.parse(raw)
+      _importSnapshot(data)
+      unlinkSync(SNAP_PATH)
       console.log('[DB] Snapshot imported — system continues from previous state')
     } catch (e) { console.warn('[DB] Snapshot import failed:', e.message) }
   }
 
-  console.log(`[DB] SQLite WAL ready at ${DB_PATH}`)
+  // Initial flush
+  _flush()
+  console.log('[DB] sql.js ready — pure JS, no native compilation')
 }
 
-// ── SNAPSHOT EXPORT (one-click migration via dashboard) ───────────────────────
+function _importSnapshot(data) {
+  for (const [table, rows] of Object.entries(data.tables || {})) {
+    if (!Array.isArray(rows) || !rows.length) continue
+    const cols = Object.keys(rows[0]).filter(c => c !== 'id')
+    const placeholders = cols.map(() => '?').join(',')
+    const stmt = `INSERT OR REPLACE INTO ${table} (${cols.join(',')}) VALUES (${placeholders})`
+    for (const row of rows) {
+      try { db.run(stmt, cols.map(c => row[c])) } catch {}
+    }
+  }
+}
+
 export function exportSnapshot() {
+  const tables = ['executions','config','treasury','overlay_queue','sovereign_memory']
   const snap = {
     version: '2.0',
     exportedAt: Date.now(),
-    tables: {
-      executions:      db.prepare('SELECT * FROM executions ORDER BY ts DESC LIMIT 10000').all(),
-      config:          db.prepare('SELECT * FROM config').all(),
-      treasury:        db.prepare('SELECT * FROM treasury ORDER BY ts DESC LIMIT 1000').all(),
-      sovereign_memory:db.prepare('SELECT * FROM sovereign_memory ORDER BY ts DESC LIMIT 5000').all(),
-    }
+    tables: Object.fromEntries(tables.map(t => {
+      try { return [t, db.exec(`SELECT * FROM ${t} ORDER BY rowid DESC LIMIT 10000`)[0]?.values?.map(row =>
+        Object.fromEntries(db.exec(`SELECT * FROM ${t} LIMIT 0`)[0]?.columns?.map((c,i) => [c, row[i]]) ?? [])
+      ) ?? []] } catch { return [t, []] }
+    }))
   }
-  const compressed = gzipSync(JSON.stringify(snap))
-  const outPath = `${DATA_DIR}/snapshot.json`
-  writeFileSync(outPath, compressed)
-  console.log(`[DB] Snapshot exported: ${(compressed.length/1024).toFixed(1)}KB → ${outPath}`)
-  return { path:outPath, size:compressed.length, tables:Object.keys(snap.tables) }
+  // Simpler approach for sql.js
+  const result = {}
+  for (const t of tables) {
+    try {
+      const r = db.exec(`SELECT * FROM ${t} ORDER BY rowid DESC LIMIT 5000`)
+      if (r[0]) {
+        result[t] = r[0].values.map(row => Object.fromEntries(r[0].columns.map((c,i)=>[c,row[i]])))
+      } else { result[t] = [] }
+    } catch { result[t] = [] }
+  }
+  const snap2 = { version:'2.0', exportedAt:Date.now(), tables:result }
+  const out   = `${DATA_DIR}/snapshot.json`
+  writeFileSync(out, JSON.stringify(snap2))
+  _flush()
+  return { path:out, size:JSON.stringify(snap2).length }
 }
 
-function importSnapshot(data) {
-  const insert = (table, rows) => {
-    if (!rows?.length) return
-    const cols = Object.keys(rows[0]).filter(c => c !== 'id')
-    const stmt = db.prepare(`INSERT OR REPLACE INTO ${table} (${cols.join(',')}) VALUES (${cols.map(()=>'?').join(',')})`)
-    const bulk = db.transaction(rs => rs.forEach(r => stmt.run(cols.map(c=>r[c]))))
-    bulk(rows)
-  }
-  for (const [table, rows] of Object.entries(data.tables||{})) {
-    try { insert(table, rows) } catch {}
-  }
+// ── CRUD — thin wrappers ───────────────────────────────────────────────────────
+export function setConfig(key, val) {
+  db.run('INSERT OR REPLACE INTO config(key,val,updated) VALUES(?,?,?)', [key, String(val), Date.now()])
+  _dirty = true
 }
 
-// ── CRUD HELPERS ───────────────────────────────────────────────────────────────
-export const setConfig = (key, val) =>
-  db.prepare('INSERT OR REPLACE INTO config(key,val,updated) VALUES(?,?,unixepoch())').run(key, String(val))
-
-export const getConfig = (key, def=null) => {
-  const r = db.prepare('SELECT val FROM config WHERE key=?').get(key)
-  return r ? r.val : def
+export function getConfig(key, def=null) {
+  try {
+    const r = db.exec(`SELECT val FROM config WHERE key='${key.replace(/'/g,"''")}'`)
+    return r[0]?.values[0]?.[0] ?? def
+  } catch { return def }
 }
 
-export const recordExecution = (data) =>
-  db.prepare('INSERT INTO executions(ts,strategy,chain,profit_usdc,flash_amount,gas_cost,status,tx_hash) VALUES(?,?,?,?,?,?,?,?)')
-    .run(Date.now(), data.strategy||'', data.chain||'', data.profit_usdc||0, data.flash_amount||0, data.gas_cost||0, data.status||'success', data.tx_hash||null)
+export function recordExecution(data) {
+  db.run(
+    'INSERT INTO executions(ts,strategy,chain,profit_usdc,flash_amount,gas_cost,status,tx_hash) VALUES(?,?,?,?,?,?,?,?)',
+    [Date.now(), data.strategy||'', data.chain||'', data.profit_usdc||0, data.flash_amount||0, data.gas_cost||0, data.status||'success', data.tx_hash||null]
+  )
+  _dirty = true
+}
 
-export const getExecutions = (limit=100) =>
-  db.prepare('SELECT * FROM executions ORDER BY ts DESC LIMIT ?').all(limit)
+export function getExecutions(limit=100) {
+  try {
+    const r = db.exec(`SELECT * FROM executions ORDER BY rowid DESC LIMIT ${parseInt(limit)}`)
+    if (!r[0]) return []
+    return r[0].values.map(row => Object.fromEntries(r[0].columns.map((c,i)=>[c,row[i]])))
+  } catch { return [] }
+}
 
-export const getTreasuryHistory = (limit=50) =>
-  db.prepare('SELECT * FROM treasury ORDER BY ts DESC LIMIT ?').all(limit)
+export function recordTransfer(data) {
+  db.run(
+    'INSERT INTO treasury(ts,type,amount,bridge,recipient,status,reference) VALUES(?,?,?,?,?,?,?)',
+    [Date.now(), data.type||'transfer', data.amount||0, data.bridge||'', data.recipient||'', data.status||'pending', data.reference||'']
+  )
+  _dirty = true
+}
 
-export const recordTransfer = (data) =>
-  db.prepare('INSERT INTO treasury(ts,type,amount,bridge,recipient,status,reference) VALUES(?,?,?,?,?,?,?)')
-    .run(Date.now(), data.type||'transfer', data.amount||0, data.bridge||'', data.recipient||'', data.status||'pending', data.reference||'')
+export function getTreasuryHistory(limit=50) {
+  try {
+    const r = db.exec(`SELECT * FROM treasury ORDER BY rowid DESC LIMIT ${parseInt(limit)}`)
+    if (!r[0]) return []
+    return r[0].values.map(row => Object.fromEntries(r[0].columns.map((c,i)=>[c,row[i]])))
+  } catch { return [] }
+}
+
+// Flush on exit
+process.on('exit',    _flush)
+process.on('SIGTERM', () => { _flush(); process.exit(0) })
+process.on('SIGINT',  () => { _flush(); process.exit(0) })
