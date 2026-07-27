@@ -1,124 +1,74 @@
-// src/sovereign.js — FINAL. Worker Thread. No dynamic imports. No Atomics.waitAsync.
-// All exports available synchronously. Works on Railway free tier.
-import { workerData }                   from 'worker_threads'
-import { existsSync, writeFileSync,
-         readFileSync, mkdirSync }       from 'fs'
-import { fileURLToPath }                 from 'url'
-import path                              from 'path'
+// ═══════════════════════════════════════════════════════════════
+// src/sovereign.js — Worker Thread. AGI. 4 Laws. Learning. Chat.
+// ═══════════════════════════════════════════════════════════════
+import { workerData, parentPort } from 'worker_threads'
+import { existsSync, writeFileSync, readFileSync, mkdirSync } from 'fs'
+import { getPropellerTarget, CHAINS, TOTAL_FLASH, MEMORY_MB } from './config.js'
 
-const { SAB }    = workerData
-const HOT        = new Float64Array(SAB)
-const __dirname  = path.dirname(fileURLToPath(import.meta.url))
+const { SAB } = workerData
+const HOT     = new Float64Array(SAB)
 
-const DATA_DIR  = existsSync('/data') ? '/data' : (() => { mkdirSync('./data',{recursive:true}); return './data' })()
-const SDAL_PATH = `${DATA_DIR}/sdal.json`
+const DATA  = existsSync('/data')?'/data':(mkdirSync('./data',{recursive:true}),'./data')
+const SDAL  = `${DATA}/sdal.json`
+let cfg = { p:5, mult:1.0, lastLearn:0 }
+try { cfg={...cfg,...JSON.parse(readFileSync(SDAL,'utf8'))} } catch {}
+const save = ()=>{ try{writeFileSync(SDAL,JSON.stringify(cfg))}catch{} }
 
-let SDAL = {
-  propellerLevel:5, flashMultiplier:1.0,
-  lastLearning:0, competitorModel:{}, gasHistory:{}
-}
-try { SDAL = { ...SDAL, ...JSON.parse(readFileSync(SDAL_PATH,'utf8')) } } catch {}
-const saveSDAL = () => { try { writeFileSync(SDAL_PATH, JSON.stringify(SDAL)) } catch {} }
+// 4 LAWS
+const LAWS = ['Capital protection — $1B/hr loss = emergency halt','Hit propeller target exactly — governor not floor','Operator commands override all SOVEREIGN decisions','Self-optimize continuously from every outcome']
 
-// ── 4 LAWS (enforced every governance cycle) ───────────────────────────────────
-const LAWS = {
-  1:'Capital protection. $1B/hr loss = halt.',
-  2:'Hit propeller target exactly.',
-  3:'Operator commands override all.',
-  4:'Optimize continuously.',
-}
-
-// ── CHAT (called from dashboard via IPC message) ───────────────────────────────
-// sovereign.js receives parentPort messages with { type:'chat', msg }
-// and replies with { type:'chatReply', response }
-import { parentPort } from 'worker_threads'
-
-parentPort?.on('message', async msg => {
-  if (msg?.type === 'chat') {
-    const reply = processChat(msg.msg || '')
-    parentPort.postMessage({ type:'chatReply', id:msg.id, response:reply })
-  }
+parentPort?.on('message', msg=>{
+  if(msg?.type==='chat') parentPort.postMessage({type:'chatReply',id:msg.id,response:chat(msg.msg||'')})
 })
 
-function processChat(msg) {
-  const m = msg.toLowerCase().trim()
-  if (m.match(/propeller[:\s]+(\d+\.?\d*)/)) {
-    const lvl = parseFloat(m.match(/(\d+\.?\d*)/)[0])
-    if (lvl >= 0 && lvl <= 50) { HOT[0]=lvl; SDAL.propellerLevel=lvl; saveSDAL(); return `✓ Propeller → P${lvl}` }
-  }
-  if (/\bhalt\b|\bstop\b/.test(m))   { HOT[0]=0;  return '⚠ Halted' }
-  if (/\bresume\b|\bstart\b/.test(m)) { HOT[0]=SDAL.propellerLevel||5; return `✓ Resumed P${HOT[0]}` }
-  if (/\bcrash\b/.test(m))            { HOT[0]=50; HOT[4]=100; return '🔴 CRASH MODE P50' }
-  if (/\bstatus\b/.test(m)) return `P${HOT[0]} | $${(HOT[1]/1e12).toFixed(4)}T/day | Flash $${((HOT[2]+HOT[3])/1e9).toFixed(0)}B | Uptime ${Math.floor(HOT[8]/60)}min`
-  if (/\blaws\b/.test(m)) return Object.entries(LAWS).map(([k,v])=>`LAW ${k}: ${v}`).join('\n')
-  return `SOVEREIGN P${HOT[0]} | Revenue: $${(HOT[1]/1e12).toFixed(4)}T today | Commands: status, propeller N, halt, resume, crash, laws`
+function chat(m) {
+  const s = m.toLowerCase().trim()
+  const pMatch = s.match(/p(?:ropeller)?\s*(\d+\.?\d*)/)
+  if(pMatch){ const l=parseFloat(pMatch[1]); if(l>=0&&l<=50){HOT[0]=l;cfg.p=l;save();return `✓ Propeller → P${l}`} }
+  if(/halt|stop/.test(s))   { HOT[0]=0;  return '⚠ Halted — P0' }
+  if(/resume|start/.test(s)){ HOT[0]=cfg.p||5; return `✓ Resumed P${HOT[0]}` }
+  if(/crash|p∞/.test(s))    { HOT[0]=50;HOT[4]=100; return '🔴 CRASH MODE — P50 all resources' }
+  if(/status/.test(s))       return `P${HOT[0]} | $${(HOT[1]/1e12).toFixed(4)}T/day | Flash $${((HOT[2]+HOT[3])/1e9).toFixed(0)}B | ${HOT[7]|0} execs | ${HOT[8]/60|0}min uptime | Mem ${process.memoryUsage().heapUsed/1024/1024|0}MB`
+  if(/laws/.test(s))         return LAWS.map((l,i)=>`LAW ${i+1}: ${l}`).join('\n')
+  if(/chains/.test(s))       return `${CHAINS.length} chains | ${(CHAINS.filter((_,i)=>HOT[40+i]>0).length)} active WS | $${(TOTAL_FLASH/1e9).toFixed(1)}B flash`
+  if(/amplifier/.test(s))    return `Amplifier bonus: $${(HOT[10]/1e6).toFixed(2)}M | Total amplified: $${(HOT[11]/1e12).toFixed(4)}T`
+  return `SOVEREIGN P${HOT[0]} | $${(HOT[1]/1e12).toFixed(4)}T today | Commands: status, propeller N, halt, resume, crash, laws, chains, amplifier`
 }
 
-// ── LEARNING ───────────────────────────────────────────────────────────────────
-const outcomes = []
-function learnFromOutcomes() {
-  if (outcomes.length < 10) return
-  const batch  = outcomes.splice(0, 50)
-  const avgErr = batch.reduce((s,o) => s + Math.abs((o.actual-o.predicted)/(Math.abs(o.predicted)||1)), 0) / batch.length
-  if (avgErr > 0.05) SDAL.flashMultiplier = Math.max(0.7, SDAL.flashMultiplier*0.98)
-  else if (avgErr < 0.02) SDAL.flashMultiplier = Math.min(1.5, SDAL.flashMultiplier*1.01)
-  SDAL.lastLearning = Date.now()
-  saveSDAL()
+// Learning outcomes
+const outcomes=[]
+function learn(){
+  if(outcomes.length<10) return
+  const b=outcomes.splice(0,50)
+  const avgErr=b.reduce((s,o)=>s+Math.abs((o.a-o.p)/(Math.abs(o.p)||1)),0)/b.length
+  if(avgErr>0.05) cfg.mult=Math.max(0.7,cfg.mult*0.98)
+  else if(avgErr<0.02) cfg.mult=Math.min(1.5,cfg.mult*1.01)
+  cfg.lastLearn=Date.now(); save()
 }
 
-// ── DAILY TARGET ───────────────────────────────────────────────────────────────
-function dailyTarget(lvl) {
-  if (lvl<=0.1) return 1e6;  if (lvl<=1)  return 1e9
-  if (lvl<=5)   return 5e10; if (lvl<=11) return 1.5e12
-  if (lvl<=15)  return 3e12; if (lvl<=20) return 5e12
-  if (lvl<=25)  return 7e12; return 8.7e15
-}
-
-// ── GOVERNANCE LOOP (60s) ──────────────────────────────────────────────────────
-async function governLoop() {
-  while (true) {
-    await new Promise(r => setTimeout(r, 60_000))
-    try {
-      // LAW 1: emergency halt on excessive loss
-      // (simplified: check if revenue went negative unexpectedly)
-      if (HOT[1] < -1e9) { HOT[0]=0; console.error('[SOVEREIGN] LAW 1: Emergency halt') }
-
-      // LAW 2: pace check
-      const pct = (HOT[8]%86400)/86400
-      const exp = dailyTarget(HOT[0]) * pct
-      if (HOT[1] < exp*0.8) SDAL.flashMultiplier = Math.min(1.5, SDAL.flashMultiplier*1.02)
-      else if (HOT[1] > exp*1.05) SDAL.flashMultiplier = Math.max(0.5, SDAL.flashMultiplier*0.98)
-
-      learnFromOutcomes()
-
-      // Hyperliquid funding rates for RS5 crash signal
-      try {
-        const r = await fetch('https://api.hyperliquid.xyz/info', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({type:'metaAndAssetCtxs'}),
-          signal:AbortSignal.timeout(5000)
-        })
-        if (r.ok) {
-          const [,ctxs] = await r.json()
-          const max = Math.max(...ctxs.slice(0,20).map(c => Math.abs(parseFloat(c.funding||0))))
-          HOT[4] = Math.min(max*5000, 100)
-        }
-      } catch {}
-
-      saveSDAL()
-    } catch (e) {
-      if (process.env.DEBUG) console.error('[SOVEREIGN]', e.message?.slice(0,50))
-    }
+// Governance: 60s loop
+async function govern(){
+  while(true){
+    await new Promise(r=>setTimeout(r,60000))
+    try{
+      // LAW 1
+      if(HOT[1]<-1e9){HOT[0]=0;console.error('[SOVEREIGN] LAW 1: Emergency halt')}
+      // LAW 2: pace
+      const frac=(HOT[8]%86400)/86400, exp=getPropellerTarget(HOT[0])*frac
+      if(HOT[1]<exp*0.80) cfg.mult=Math.min(1.5,cfg.mult*1.02)
+      else if(HOT[1]>exp*1.02) cfg.mult=Math.max(0.5,cfg.mult*0.99)
+      // Poll Hyperliquid for crash signal
+      try{
+        const r=await fetch('https://api.hyperliquid.xyz/info',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'metaAndAssetCtxs'}),signal:AbortSignal.timeout(5000)})
+        if(r.ok){const[,c]=await r.json();const max=Math.max(...c.slice(0,20).map(x=>Math.abs(parseFloat(x.funding||0))));HOT[4]=Math.min(max*5000,100)}
+      }catch{}
+      learn(); save()
+    }catch(e){if(process.env.DEBUG)console.error('[SOVEREIGN]',e.message?.slice(0,50))}
   }
 }
 
-// ── MIDNIGHT LEARNING REVIEW ───────────────────────────────────────────────────
-function scheduleReview() {
-  const now=new Date(), nx=new Date()
-  nx.setUTCHours(3,0,0,0); nx.setUTCDate(nx.getUTCDate()+1)
-  setTimeout(() => { learnFromOutcomes(); scheduleReview() }, nx-now)
-}
+// Overnight review 3AM UTC
+;(function sched(){const n=new Date(),nx=new Date();nx.setUTCHours(3,0,0,0);nx.setUTCDate(nx.getUTCDate()+1);setTimeout(()=>{learn();sched()},nx-n)})()
 
-scheduleReview()
-governLoop()
-console.log('[SOVEREIGN] Online. 4 Laws active.')
+govern()
+console.log('[SOVEREIGN] Online — 4 Laws active')
