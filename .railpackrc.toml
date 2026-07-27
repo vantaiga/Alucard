@@ -1,7 +1,3 @@
-# .railpackrc.toml — NEW FILE — place in repo ROOT
-# Tells Railpack to include Python in build environment
-# Required for any npm package with native addons (even as transitive deps)
-# sql.js is pure JS so this is belt-and-suspenders safety only
-
+# .railpackrc.toml — belt-and-suspenders (sql.js needs none of these, but safe to have)
 [install]
-nixpkgs = ["python3", "nodejs_22"]
+nixpkgs = ["python3"]
