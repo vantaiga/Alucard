@@ -2,7 +2,7 @@
   "name": "alucard",
   "version": "1.0.0",
   "type": "module",
-  "description": "ALUCARD Sovereign DeFi Protocol — Operator: Bun Omar Secka",
+  "description": "ALUCARD Sovereign DeFi Protocol",
   "engines": { "node": ">=20.0.0" },
   "main": "src/index.js",
   "scripts": {
