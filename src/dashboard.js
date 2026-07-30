@@ -272,7 +272,7 @@ app.post('/api/transfer', auth, async (req, res) => {
       network: net_type,
       beneficiary_name: accountName || 'Recipient',
       reference,
-      description:'(system) Operator: Bun Omar SECKA',
+      description:'Alucard Operator: Bun Omar SECKA',
     }
     if (swiftCode) body.swift = swiftCode
 
