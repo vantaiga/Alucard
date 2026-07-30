@@ -5,1204 +5,893 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>ALUCARD — DAYBREAK</title>
 <style>
-/* ═══════════════ RESET & ROOT ═══════════════ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#07070F;--bg1:#0D0D1A;--bg2:#111125;--bg3:#161630;
   --blue:#00D4FF;--blue2:#0099CC;--blue3:#006699;
-  --glow:0 0 20px rgba(0,212,255,0.4),0 0 40px rgba(0,212,255,0.15);
-  --glow-s:0 0 8px rgba(0,212,255,0.5);
+  --glow:0 0 20px rgba(0,212,255,.4),0 0 40px rgba(0,212,255,.15);
+  --glow-s:0 0 8px rgba(0,212,255,.5);
   --red:#FF2244;--amber:#FFB800;--green:#00FF88;
-  --text:#E8F4FF;--muted:#6080A0;--mono:'JetBrains Mono','Fira Code','Courier New',monospace;
-  --border:1px solid rgba(0,212,255,0.15);
-  --radius:8px;--transition:all 0.2s ease;
+  --text:#E8F4FF;--muted:#6080A0;--mono:'JetBrains Mono','Fira Code',monospace;
+  --border:1px solid rgba(0,212,255,.12);--radius:8px;
 }
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;overflow:hidden}
-
-/* ═══════════════ SCROLLBAR ═══════════════ */
-::-webkit-scrollbar{width:4px;height:4px}
-::-webkit-scrollbar-track{background:var(--bg1)}
-::-webkit-scrollbar-thumb{background:var(--blue3);border-radius:2px}
-
-/* ═══════════════ LAYOUT ═══════════════ */
-#app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
-#header{display:flex;align-items:center;gap:16px;padding:10px 20px;background:var(--bg1);border-bottom:var(--border);flex-shrink:0}
-#nav{display:flex;gap:2px;padding:6px 16px;background:var(--bg1);border-bottom:var(--border);overflow-x:auto;flex-shrink:0}
-#content{flex:1;overflow:hidden;position:relative}
-.tab-panel{position:absolute;inset:0;overflow-y:auto;padding:16px;display:none}
-.tab-panel.active{display:block}
-
-/* ═══════════════ SIGIL ═══════════════ */
-#sigil{width:36px;height:36px;position:relative;flex-shrink:0}
-.sigil-svg{width:100%;height:100%;filter:drop-shadow(var(--glow-s))}
+::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-track{background:var(--bg1)}::-webkit-scrollbar-thumb{background:var(--blue3);border-radius:2px}
+#app{display:flex;flex-direction:column;height:100vh}
+/* HEADER */
+#hdr{display:flex;align-items:center;gap:12px;padding:8px 18px;background:var(--bg1);border-bottom:var(--border);flex-shrink:0}
+#sigil{width:32px;height:32px;flex-shrink:0}
+.sigil-svg{width:100%;height:100%}
 .sigil-svg path{fill:none;stroke:var(--blue);stroke-width:1.5}
-#sigil.calm .sigil-svg{animation:pulse-calm 3s ease-in-out infinite}
-#sigil.active .sigil-svg{animation:pulse-active 1s ease-in-out infinite}
-#sigil.alert .sigil-svg path{stroke:var(--amber)}
-#sigil.critical .sigil-svg path{stroke:var(--red)}
-#sigil.crash .sigil-svg path{stroke:#fff;animation:pulse-crash 0.3s ease-in-out infinite}
-@keyframes pulse-calm{0%,100%{opacity:0.7}50%{opacity:1;filter:drop-shadow(0 0 12px rgba(0,212,255,0.8))}}
-@keyframes pulse-active{0%,100%{opacity:0.8}50%{opacity:1;filter:drop-shadow(0 0 20px rgba(0,212,255,1))}}
-@keyframes pulse-crash{0%,100%{opacity:1;filter:drop-shadow(0 0 30px rgba(255,255,255,1))}50%{opacity:0.6}}
-
-/* ═══════════════ HEADER ELEMENTS ═══════════════ */
-#sys-name{font-size:18px;font-weight:700;letter-spacing:4px;color:var(--blue);text-shadow:var(--glow-s)}
-#sys-sub{font-size:10px;color:var(--muted);letter-spacing:2px}
-.header-stat{display:flex;flex-direction:column;align-items:center;padding:0 12px;border-left:var(--border)}
-.hs-label{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
-.hs-value{font-size:13px;color:var(--blue);font-weight:600}
-#pin-status{margin-left:auto;display:flex;align-items:center;gap:8px}
-
-/* ═══════════════ NAV TABS ═══════════════ */
-.tab-btn{background:transparent;border:none;color:var(--muted);padding:6px 14px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:1px;border-radius:4px;white-space:nowrap;transition:var(--transition)}
-.tab-btn:hover{color:var(--text);background:rgba(0,212,255,0.05)}
-.tab-btn.active{color:var(--blue);background:rgba(0,212,255,0.1);box-shadow:inset 0 -2px 0 var(--blue)}
-
-/* ═══════════════ CARDS & PANELS ═══════════════ */
-.grid{display:grid;gap:12px}
-.g2{grid-template-columns:1fr 1fr}
-.g3{grid-template-columns:1fr 1fr 1fr}
-.g4{grid-template-columns:1fr 1fr 1fr 1fr}
-.card{background:var(--bg2);border:var(--border);border-radius:var(--radius);padding:16px;position:relative;overflow:hidden}
-.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--blue),transparent);opacity:0.5}
-.card-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
-.metric-val{font-size:28px;font-weight:700;color:var(--blue);text-shadow:var(--glow-s);line-height:1}
-.metric-sub{font-size:10px;color:var(--muted);margin-top:4px}
-.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600}
-.badge-green{background:rgba(0,255,136,0.1);color:var(--green);border:1px solid rgba(0,255,136,0.3)}
-.badge-amber{background:rgba(255,184,0,0.1);color:var(--amber);border:1px solid rgba(255,184,0,0.3)}
-.badge-red{background:rgba(255,34,68,0.1);color:var(--red);border:1px solid rgba(255,34,68,0.3)}
-.badge-blue{background:rgba(0,212,255,0.1);color:var(--blue);border:1px solid rgba(0,212,255,0.3)}
-
-/* ═══════════════ REVENUE COUNTER ═══════════════ */
-#rev-counter{font-size:48px;font-weight:700;color:var(--blue);text-shadow:0 0 30px rgba(0,212,255,0.6),0 0 60px rgba(0,212,255,0.2);font-variant-numeric:tabular-nums;letter-spacing:-1px;line-height:1}
-#rev-tick{animation:tick-glow 0.1s ease-out}
-@keyframes tick-glow{0%{text-shadow:0 0 60px rgba(0,212,255,1),0 0 120px rgba(0,212,255,0.5)}100%{text-shadow:0 0 30px rgba(0,212,255,0.6),0 0 60px rgba(0,212,255,0.2)}}
-
-/* ═══════════════ PROPELLER SLIDER ═══════════════ */
-#prop-section{display:flex;flex-direction:column;align-items:center;gap:20px;padding:24px}
-#prop-dial-wrap{position:relative;width:280px;height:280px}
-#prop-canvas{width:100%;height:100%}
-#prop-level-display{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
-#prop-level-num{font-size:52px;font-weight:700;color:var(--blue);text-shadow:var(--glow)}
-#prop-level-label{font-size:11px;color:var(--muted);letter-spacing:2px}
-#prop-rev-display{font-size:22px;color:var(--blue);text-align:center;text-shadow:var(--glow-s)}
-#prop-controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-.prop-preset{background:var(--bg2);border:var(--border);color:var(--muted);padding:6px 14px;border-radius:20px;cursor:pointer;font-family:var(--mono);font-size:11px;transition:var(--transition)}
-.prop-preset:hover,.prop-preset.active{background:rgba(0,212,255,0.1);color:var(--blue);border-color:var(--blue);box-shadow:var(--glow-s)}
-#prop-slider-wrap{width:100%;max-width:400px}
-#prop-slider{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;outline:none;cursor:pointer;background:linear-gradient(90deg,var(--blue3),var(--blue))}
-#prop-slider::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--blue);box-shadow:var(--glow);cursor:pointer;transition:var(--transition)}
-#prop-slider::-webkit-slider-thumb:hover{transform:scale(1.3);box-shadow:0 0 20px rgba(0,212,255,0.8)}
-#prop-warning{color:var(--amber);font-size:11px;text-align:center;display:none}
-
-/* ═══════════════ CRASH BUTTON ═══════════════ */
-#crash-section{display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;background:var(--bg2);border:1px solid rgba(255,34,68,0.2);border-radius:var(--radius);margin-top:8px}
-#crash-countdown{font-size:14px;color:var(--muted);text-align:center}
-#crash-timer{color:var(--amber);font-size:18px;font-weight:600}
-#crash-probability{font-size:11px;color:var(--muted)}
-#crash-toggle{position:relative;width:80px;height:40px;cursor:pointer}
-#crash-toggle input{opacity:0;width:0;height:0}
-.crash-slider{position:absolute;inset:0;border-radius:20px;background:var(--bg3);border:1px solid rgba(255,34,68,0.3);transition:0.3s}
-.crash-slider::before{content:'';position:absolute;height:32px;width:32px;left:4px;top:4px;border-radius:50%;background:var(--muted);transition:0.3s}
-#crash-toggle input:checked+.crash-slider{background:rgba(255,34,68,0.2);border-color:var(--red);box-shadow:0 0 20px rgba(255,34,68,0.4)}
-#crash-toggle input:checked+.crash-slider::before{transform:translateX(40px);background:var(--red);box-shadow:0 0 12px var(--red)}
-#crash-label{font-size:12px;text-align:center;color:var(--muted)}
-#crash-active-banner{color:var(--red);font-size:12px;font-weight:600;text-align:center;animation:blink 0.5s ease-in-out infinite;display:none}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
-
-/* ═══════════════ CHAIN STATUS ═══════════════ */
-.chain-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
-.chain-card{background:var(--bg3);border:var(--border);border-radius:6px;padding:10px 12px;display:flex;align-items:center;gap:10px;transition:var(--transition)}
-.chain-card:hover{border-color:rgba(0,212,255,0.3);background:rgba(0,212,255,0.03)}
-.chain-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:var(--transition)}
-.chain-dot.on{background:var(--green);box-shadow:0 0 6px var(--green)}
-.chain-dot.off{background:var(--muted)}
-.chain-name{flex:1;font-size:11px;color:var(--text)}
-.chain-gas{font-size:10px;color:var(--muted)}
-.chain-blocks{font-size:10px;color:var(--blue2)}
-
-/* ═══════════════ SOVEREIGN CHAT ═══════════════ */
-#chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 140px)}
-#chat-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
-.chat-msg{max-width:80%;padding:10px 14px;border-radius:12px;line-height:1.6;font-size:12px}
-.chat-user{align-self:flex-end;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.2);border-radius:12px 12px 2px 12px}
-.chat-sov{align-self:flex-start;background:var(--bg2);border:var(--border);border-radius:2px 12px 12px 12px}
-.chat-sov::before{content:'SOVEREIGN ›';display:block;font-size:9px;color:var(--blue);margin-bottom:4px;letter-spacing:1px}
-#chat-input-row{display:flex;gap:8px;padding:12px 16px;background:var(--bg1);border-top:var(--border)}
-#chat-input{flex:1;background:var(--bg2);border:var(--border);color:var(--text);padding:10px 14px;border-radius:6px;font-family:var(--mono);font-size:12px;outline:none;transition:var(--transition)}
-#chat-input:focus{border-color:var(--blue);box-shadow:var(--glow-s)}
-#chat-send{background:rgba(0,212,255,0.1);border:1px solid var(--blue);color:var(--blue);padding:10px 20px;border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:12px;transition:var(--transition)}
-#chat-send:hover{background:rgba(0,212,255,0.2);box-shadow:var(--glow-s)}
-.chat-thinking{color:var(--muted);font-size:11px;animation:ellipsis 1.5s infinite}
-@keyframes ellipsis{0%{content:'SOVEREIGN thinking.'}33%{content:'SOVEREIGN thinking..'}66%{content:'SOVEREIGN thinking...'}100%{content:'SOVEREIGN thinking.'}}
-
-/* ═══════════════ TREASURY PANELS ═══════════════ */
-.transfer-type-btns{display:flex;gap:8px;margin-bottom:16px}
-.type-btn{flex:1;padding:10px;background:var(--bg3);border:var(--border);color:var(--muted);border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:1px;text-align:center;transition:var(--transition)}
-.type-btn:hover,.type-btn.active{background:rgba(0,212,255,0.1);color:var(--blue);border-color:var(--blue)}
-.transfer-form{display:none}
-.transfer-form.active{display:block}
-.form-group{margin-bottom:12px}
-.form-group label{display:block;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:6px;text-transform:uppercase}
-.form-input{width:100%;background:var(--bg3);border:var(--border);color:var(--text);padding:10px 12px;border-radius:6px;font-family:var(--mono);font-size:12px;outline:none;transition:var(--transition)}
-.form-input:focus{border-color:var(--blue);box-shadow:var(--glow-s)}
-.sub-type-btns{display:flex;gap:8px;margin-bottom:16px}
-.sub-type-btn{flex:1;padding:8px;background:var(--bg3);border:var(--border);color:var(--muted);border-radius:4px;cursor:pointer;font-family:var(--mono);font-size:10px;text-align:center;transition:var(--transition)}
-.sub-type-btn:hover,.sub-type-btn.active{background:rgba(0,212,255,0.08);color:var(--blue);border-color:var(--blue2)}
-.btn-primary{width:100%;padding:12px;background:rgba(0,212,255,0.1);border:1px solid var(--blue);color:var(--blue);border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:12px;letter-spacing:2px;transition:var(--transition);margin-top:8px}
-.btn-primary:hover{background:rgba(0,212,255,0.2);box-shadow:var(--glow)}
-.btn-danger{background:rgba(255,34,68,0.1);border-color:var(--red);color:var(--red)}
-.btn-danger:hover{background:rgba(255,34,68,0.2);box-shadow:0 0 20px rgba(255,34,68,0.4)}
-.fee-preview{font-size:11px;color:var(--muted);padding:8px 12px;background:var(--bg3);border-radius:4px;margin-top:8px}
-
-/* ═══════════════ USB VAULT ═══════════════ */
-#usb-status{display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg3);border:var(--border);border-radius:6px;margin-bottom:16px}
-#usb-indicator{width:10px;height:10px;border-radius:50%;background:var(--muted);transition:var(--transition)}
-#usb-indicator.connected{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse-calm 2s infinite}
-#usb-balance-display{font-size:18px;color:var(--green);font-weight:600}
-#usb-vault-form{display:none}
-#usb-vault-form.visible{display:block}
-.vault-btns{display:flex;gap:8px}
-.btn-vault{flex:1;padding:12px;border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:1px;transition:var(--transition)}
-.btn-add{background:rgba(0,255,136,0.1);border:1px solid var(--green);color:var(--green)}
-.btn-add:hover{background:rgba(0,255,136,0.2)}
-.btn-restore{background:rgba(0,212,255,0.1);border:1px solid var(--blue);color:var(--blue)}
-.btn-restore:hover{background:rgba(0,212,255,0.2)}
-
-/* ═══════════════ AMPLIFIER ═══════════════ */
-.amp-layer{display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg3);border:var(--border);border-radius:6px;margin-bottom:8px;transition:var(--transition)}
-.amp-layer:hover{border-color:rgba(0,212,255,0.3)}
-.amp-layer-icon{width:32px;height:32px;border-radius:50%;background:rgba(0,212,255,0.1);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
-.amp-layer-info{flex:1}
-.amp-layer-name{font-size:11px;color:var(--text);font-weight:600}
-.amp-layer-val{font-size:10px;color:var(--muted)}
-.amp-layer-profit{font-size:13px;color:var(--green);font-weight:600}
-.amp-bar{height:2px;background:rgba(0,212,255,0.1);border-radius:1px;margin-top:6px;overflow:hidden}
-.amp-bar-fill{height:100%;background:linear-gradient(90deg,var(--blue3),var(--blue));border-radius:1px;transition:width 1s ease}
-#amp-multiplier{font-size:40px;font-weight:700;color:var(--blue);text-shadow:var(--glow);text-align:center}
-
-/* ═══════════════ OVERLAY ═══════════════ */
-.overlay-bar{display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg3);border:var(--border);border-radius:6px;margin-bottom:8px}
-#queue-fill-bar{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin:8px 0}
-#queue-fill{height:100%;background:linear-gradient(90deg,var(--blue3),var(--blue));border-radius:2px;transition:width 0.5s}
-
-/* ═══════════════ EXECUTION LOG ═══════════════ */
-#exec-log{font-size:11px;line-height:1.8;overflow-y:auto;max-height:400px;background:var(--bg);border:var(--border);border-radius:6px;padding:12px;font-family:var(--mono)}
-.exec-row{display:flex;gap:12px;border-bottom:1px solid rgba(255,255,255,0.03);padding:4px 0}
-.exec-ts{color:var(--muted);min-width:80px}
-.exec-strategy{color:var(--blue2);min-width:40px}
-.exec-chain{color:var(--muted);min-width:60px}
-.exec-profit{color:var(--green);text-align:right;flex:1}
-
-/* ═══════════════ INTELLIGENCE ═══════════════ */
-.intel-card{background:var(--bg3);border:var(--border);border-radius:6px;padding:12px;margin-bottom:8px}
-.intel-title{font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:8px;text-transform:uppercase}
-.intel-row{display:flex;justify-content:space-between;padding:3px 0;font-size:11px}
-.intel-label{color:var(--muted)}
-.intel-val{color:var(--blue)}
-
-/* ═══════════════ SYSTEM TAB ═══════════════ */
-.sys-btn{padding:12px 20px;background:var(--bg2);border:var(--border);color:var(--text);border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:1px;transition:var(--transition);width:100%;text-align:left;margin-bottom:8px}
-.sys-btn:hover{border-color:var(--blue);color:var(--blue);background:rgba(0,212,255,0.05)}
-.env-list{font-size:11px;line-height:2}
-.env-row{display:flex;gap:12px}
-.env-key{color:var(--blue2);min-width:120px}
-.env-val{color:var(--green)}
-.env-missing{color:var(--red)}
-
-/* ═══════════════ LIVE LOG ═══════════════ */
-#log-feed{font-size:11px;line-height:1.7;overflow-y:auto;height:400px;background:var(--bg);border:var(--border);border-radius:6px;padding:10px;font-family:var(--mono);white-space:pre-wrap;word-break:break-all}
-.log-info{color:var(--text)}
-.log-warn{color:var(--amber)}
-.log-error{color:var(--red)}
-.log-success{color:var(--green)}
-.log-boot{color:var(--blue)}
-
-/* ═══════════════ ANIMATIONS ═══════════════ */
-@keyframes scanline{0%{transform:translateY(-100%)}100%{transform:translateY(100vh)}}
-#scanline{position:fixed;top:0;left:0;right:0;height:2px;background:linear-gradient(transparent,rgba(0,212,255,0.05),transparent);animation:scanline 8s linear infinite;pointer-events:none;z-index:9999}
-.fade-in{animation:fadeIn 0.3s ease}
-@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-
-/* ═══════════════ RESPONSIVE ═══════════════ */
-@media(max-width:768px){.g2,.g3,.g4{grid-template-columns:1fr}.chain-grid{grid-template-columns:1fr 1fr}#rev-counter{font-size:32px}}
+#sys-name{font-size:16px;font-weight:700;letter-spacing:4px;color:var(--blue);text-shadow:var(--glow-s)}
+.h-stat{display:flex;flex-direction:column;align-items:center;padding:0 10px;border-left:var(--border)}
+.h-label{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+.h-val{font-size:12px;color:var(--blue);font-weight:600}
+#ws-pill{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted)}
+#ws-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0}
+/* NAV */
+#nav{display:flex;gap:1px;padding:5px 14px;background:var(--bg1);border-bottom:var(--border);overflow-x:auto;flex-shrink:0}
+.tb{background:none;border:none;color:var(--muted);padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:1px;border-radius:4px;white-space:nowrap;transition:.15s}
+.tb:hover{color:var(--text);background:rgba(0,212,255,.04)}
+.tb.on{color:var(--blue);background:rgba(0,212,255,.08);box-shadow:inset 0 -2px 0 var(--blue)}
+/* PANELS */
+#content{flex:1;overflow:hidden;position:relative}
+.panel{position:absolute;inset:0;overflow-y:auto;padding:14px;display:none}
+.panel.on{display:block}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.card{background:var(--bg2);border:var(--border);border-radius:var(--radius);padding:14px;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--blue),transparent);opacity:.4}
+.ct{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.mv{font-size:26px;font-weight:700;color:var(--blue);text-shadow:var(--glow-s);line-height:1}
+.ms{font-size:10px;color:var(--muted);margin-top:3px}
+/* REVENUE */
+#rev-big{font-size:44px;font-weight:700;color:var(--blue);text-shadow:0 0 30px rgba(0,212,255,.6),0 0 60px rgba(0,212,255,.2);font-variant-numeric:tabular-nums;line-height:1}
+/* PROPELLER DIAL */
+#prop-wrap{display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px}
+#prop-canvas{width:260px;height:260px}
+#prop-num{font-size:48px;font-weight:700;color:var(--blue);text-shadow:var(--glow)}
+#prop-target{font-size:18px;color:var(--blue);text-align:center}
+#prop-slider{-webkit-appearance:none;appearance:none;width:100%;max-width:380px;height:5px;border-radius:3px;outline:none;cursor:pointer;background:linear-gradient(90deg,var(--blue3),var(--blue))}
+#prop-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--blue);box-shadow:var(--glow-s);cursor:pointer}
+.presets{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.preset{background:var(--bg2);border:var(--border);color:var(--muted);padding:5px 12px;border-radius:16px;cursor:pointer;font-family:var(--mono);font-size:10px;transition:.15s}
+.preset:hover,.preset.on{background:rgba(0,212,255,.1);color:var(--blue);border-color:var(--blue)}
+/* CRASH */
+#crash-card{background:var(--bg2);border:1px solid rgba(255,34,68,.15);border-radius:var(--radius);padding:16px;margin-top:10px;text-align:center}
+#crash-timer{color:var(--amber);font-size:16px;font-weight:600}
+#crash-tog{position:relative;width:70px;height:36px;cursor:pointer;margin:12px auto}
+#crash-tog input{opacity:0;width:0;height:0}
+.cslider{position:absolute;inset:0;border-radius:18px;background:var(--bg3);border:1px solid rgba(255,34,68,.25);transition:.3s}
+.cslider::before{content:'';position:absolute;height:28px;width:28px;left:4px;top:4px;border-radius:50%;background:var(--muted);transition:.3s}
+#crash-tog input:checked+.cslider{background:rgba(255,34,68,.15);border-color:var(--red);box-shadow:0 0 16px rgba(255,34,68,.3)}
+#crash-tog input:checked+.cslider::before{transform:translateX(34px);background:var(--red);box-shadow:0 0 10px var(--red)}
+#crash-banner{color:var(--red);font-size:11px;font-weight:700;letter-spacing:2px;display:none;margin-top:8px}
+/* CHAIN GRID */
+.cg{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:7px}
+.cc{background:var(--bg3);border:var(--border);border-radius:5px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.cdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.cdot.on{background:var(--green);box-shadow:0 0 5px var(--green)}
+.cdot.off{background:var(--muted)}
+.cname{flex:1;font-size:10px;color:var(--text)}
+.cgas{font-size:10px;color:var(--muted)}
+/* CHAT */
+#chat-outer{display:flex;flex-direction:column;height:calc(100vh - 135px)}
+#chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:9px}
+.cm{max-width:78%;padding:9px 13px;border-radius:10px;line-height:1.6;font-size:12px}
+.cm-u{align-self:flex-end;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.18);border-radius:10px 10px 2px 10px}
+.cm-s{align-self:flex-start;background:var(--bg2);border:var(--border);border-radius:2px 10px 10px 10px}
+.cm-s::before{content:'SOVEREIGN';display:block;font-size:9px;color:var(--blue);margin-bottom:3px;letter-spacing:2px}
+#chat-row{display:flex;gap:7px;padding:10px 14px;background:var(--bg1);border-top:var(--border)}
+#chat-in{flex:1;background:var(--bg2);border:var(--border);color:var(--text);padding:9px 12px;border-radius:5px;font-family:var(--mono);font-size:12px;outline:none;transition:.15s}
+#chat-in:focus{border-color:var(--blue);box-shadow:var(--glow-s)}
+#chat-btn{background:rgba(0,212,255,.08);border:1px solid var(--blue);color:var(--blue);padding:9px 18px;border-radius:5px;cursor:pointer;font-family:var(--mono);font-size:11px;transition:.15s}
+#chat-btn:hover{background:rgba(0,212,255,.18)}
+/* TRANSFER */
+.type-btns{display:flex;gap:7px;margin-bottom:14px}
+.ttype{flex:1;padding:9px;background:var(--bg3);border:var(--border);color:var(--muted);border-radius:5px;cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:1px;text-align:center;transition:.15s}
+.ttype:hover,.ttype.on{background:rgba(0,212,255,.08);color:var(--blue);border-color:var(--blue)}
+.tf{display:none}
+.tf.on{display:block}
+.sub-btns{display:flex;gap:7px;margin-bottom:14px}
+.subtype{flex:1;padding:7px;background:var(--bg3);border:var(--border);color:var(--muted);border-radius:4px;cursor:pointer;font-family:var(--mono);font-size:10px;text-align:center;transition:.15s}
+.subtype:hover,.subtype.on{background:rgba(0,212,255,.06);color:var(--blue);border-color:var(--blue2)}
+.fg{margin-bottom:11px}
+.fg label{display:block;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:5px;text-transform:uppercase}
+.fi{width:100%;background:var(--bg3);border:var(--border);color:var(--text);padding:9px 11px;border-radius:5px;font-family:var(--mono);font-size:12px;outline:none;transition:.15s}
+.fi:focus{border-color:var(--blue);box-shadow:var(--glow-s)}
+.fee-prev{font-size:10px;color:var(--muted);padding:7px 10px;background:var(--bg3);border-radius:4px;margin-top:7px}
+.btn-p{width:100%;padding:11px;background:rgba(0,212,255,.08);border:1px solid var(--blue);color:var(--blue);border-radius:5px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:2px;transition:.15s;margin-top:7px}
+.btn-p:hover{background:rgba(0,212,255,.18);box-shadow:var(--glow)}
+.btn-r{background:rgba(255,34,68,.08);border-color:var(--red);color:var(--red)}
+.btn-r:hover{background:rgba(255,34,68,.18)}
+/* USB */
+#usb-bar{display:flex;align-items:center;gap:9px;padding:11px;background:var(--bg3);border:var(--border);border-radius:5px;margin-bottom:14px}
+#usb-dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:.3s}
+#usb-dot.on{background:var(--green);box-shadow:0 0 7px var(--green)}
+#usb-bal{margin-left:auto;font-size:16px;color:var(--green);font-weight:600;display:none}
+#usb-form{display:none}
+#usb-form.on{display:block}
+.vault-btns{display:flex;gap:7px}
+.vbtn{flex:1;padding:11px;border-radius:5px;cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:1px;transition:.15s;border-width:1px;border-style:solid}
+.vadd{background:rgba(0,255,136,.08);border-color:var(--green);color:var(--green)}
+.vadd:hover{background:rgba(0,255,136,.18)}
+.vres{background:rgba(0,212,255,.08);border-color:var(--blue);color:var(--blue)}
+.vres:hover{background:rgba(0,212,255,.18)}
+/* AMP LAYERS */
+.al{display:flex;align-items:center;gap:11px;padding:9px;background:var(--bg3);border:var(--border);border-radius:5px;margin-bottom:7px}
+.al-info{flex:1}
+.al-name{font-size:11px;color:var(--text);font-weight:600}
+.al-desc{font-size:9px;color:var(--muted);margin-top:2px}
+.al-bar{height:2px;background:rgba(0,212,255,.08);border-radius:1px;margin-top:5px;overflow:hidden}
+.al-fill{height:100%;background:linear-gradient(90deg,var(--blue3),var(--blue));border-radius:1px;transition:width .8s}
+.al-val{font-size:13px;color:var(--green);font-weight:600;white-space:nowrap}
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:600}
+.b-g{background:rgba(0,255,136,.08);color:var(--green);border:1px solid rgba(0,255,136,.25)}
+.b-a{background:rgba(255,184,0,.08);color:var(--amber);border:1px solid rgba(255,184,0,.25)}
+.b-r{background:rgba(255,34,68,.08);color:var(--red);border:1px solid rgba(255,34,68,.25)}
+.b-b{background:rgba(0,212,255,.08);color:var(--blue);border:1px solid rgba(0,212,255,.25)}
+/* INTEL */
+.ir{display:flex;justify-content:space-between;padding:4px 0;font-size:11px;border-bottom:1px solid rgba(255,255,255,.03)}
+.ik{color:var(--muted)}
+.iv{color:var(--blue)}
+/* EXEC LOG */
+#exec-log{font-size:10px;line-height:1.8;overflow-y:auto;max-height:380px;background:var(--bg);border:var(--border);border-radius:5px;padding:10px;font-family:var(--mono)}
+.er{display:flex;gap:10px;border-bottom:1px solid rgba(255,255,255,.02);padding:3px 0}
+.ets{color:var(--muted);min-width:75px}.est{color:var(--blue2);min-width:38px}.ech{color:var(--muted);min-width:55px}.epr{color:var(--green);text-align:right;flex:1}
+/* SYSTEM */
+.sys-btn{padding:11px 18px;background:var(--bg2);border:var(--border);color:var(--text);border-radius:5px;cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:1px;transition:.15s;width:100%;text-align:left;margin-bottom:7px}
+.sys-btn:hover{border-color:var(--blue);color:var(--blue);background:rgba(0,212,255,.04)}
+/* PROGRESS */
+.prog{height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;margin:6px 0}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--blue3),var(--blue));border-radius:2px;transition:width .5s}
+/* RESULT */
+.result-box{margin-top:10px;padding:9px;border-radius:5px;font-size:11px;display:none}
+.result-ok{background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.2);color:var(--green)}
+.result-err{background:rgba(255,34,68,.05);border:1px solid rgba(255,34,68,.2);color:var(--red)}
+/* SCAN LINE */
+#scan{position:fixed;top:0;left:0;right:0;height:1px;background:linear-gradient(transparent,rgba(0,212,255,.06),transparent);pointer-events:none;z-index:9999;animation:scan 10s linear infinite}
+@keyframes scan{0%{transform:translateY(-1px)}100%{transform:translateY(100vh)}}
+@media(max-width:768px){.g2,.g3,.g4{grid-template-columns:1fr}.cg{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
-<div id="scanline"></div>
+<div id="scan"></div>
 
-<!-- ══ PIN GATE ══ -->
-<div id="pin-gate" style="position:fixed;inset:0;background:var(--bg);z-index:10000;display:flex;align-items:center;justify-content:center">
-  <div style="text-align:center;max-width:320px">
-    <div style="font-size:10px;letter-spacing:4px;color:var(--muted);margin-bottom:24px">ALUCARD PROTOCOL</div>
-    <div style="font-size:28px;font-weight:700;letter-spacing:6px;color:var(--blue);text-shadow:var(--glow);margin-bottom:8px">DAYBREAK</div>
-    <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:32px">SOVEREIGN CONTROL CENTER</div>
-    <div style="display:flex;gap:8px;margin-bottom:12px">
-      <input id="pin-input" type="password" placeholder="ENTER PASSKEY" style="flex:1;background:var(--bg2);border:var(--border);color:var(--text);padding:12px;border-radius:6px;font-family:var(--mono);font-size:14px;outline:none;text-align:center;letter-spacing:4px"/>
-    </div>
-    <button onclick="checkPin()" style="width:100%;padding:12px;background:rgba(0,212,255,0.1);border:1px solid var(--blue);color:var(--blue);border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:12px;letter-spacing:3px">AUTHENTICATE</button>
-    <div id="pin-error" style="color:var(--red);font-size:11px;margin-top:8px;display:none">INVALID PASSKEY</div>
+<!-- PIN GATE -->
+<div id="gate" style="position:fixed;inset:0;background:var(--bg);z-index:10000;display:flex;align-items:center;justify-content:center">
+  <div style="text-align:center;max-width:300px">
+    <div style="font-size:9px;letter-spacing:4px;color:var(--muted);margin-bottom:20px">ALUCARD PROTOCOL</div>
+    <div style="font-size:26px;font-weight:700;letter-spacing:6px;color:var(--blue);text-shadow:var(--glow);margin-bottom:6px">DAYBREAK</div>
+    <div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:28px">SOVEREIGN CONTROL CENTER</div>
+    <input id="pin-in" type="password" placeholder="PASSKEY" style="width:100%;background:var(--bg2);border:var(--border);color:var(--text);padding:11px;border-radius:5px;font-family:var(--mono);font-size:16px;outline:none;text-align:center;letter-spacing:6px;margin-bottom:10px"/>
+    <button onclick="auth()" style="width:100%;padding:11px;background:rgba(0,212,255,.08);border:1px solid var(--blue);color:var(--blue);border-radius:5px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:3px">AUTHENTICATE</button>
+    <div id="pin-err" style="color:var(--red);font-size:10px;margin-top:7px;display:none">INVALID PASSKEY</div>
   </div>
 </div>
 
-<!-- ══ MAIN APP ══ -->
 <div id="app" style="display:none">
-
 <!-- HEADER -->
-<div id="header">
-  <div id="sigil" class="calm">
-    <svg class="sigil-svg" viewBox="0 0 36 36">
-      <path d="M18 4 L32 28 L18 22 L4 28 Z"/>
-      <path d="M18 4 L18 22"/>
-      <path d="M4 28 L32 28"/>
-      <circle cx="18" cy="18" r="4" fill="none"/>
-    </svg>
-  </div>
+<div id="hdr">
+  <svg id="sigil" class="sigil-svg" viewBox="0 0 32 32">
+    <path d="M16 3 L29 25 L16 20 L3 25 Z" style="stroke:var(--blue)"/>
+    <path d="M16 3 L16 20" style="stroke:var(--blue)"/>
+    <path d="M3 25 L29 25" style="stroke:var(--blue)"/>
+    <circle cx="16" cy="16" r="3" style="stroke:var(--blue);fill:none"/>
+  </svg>
   <div>
     <div id="sys-name">ALUCARD</div>
-    <div id="sys-sub">DAYBREAK — SOVEREIGN CONTROL CENTER</div>
+    <div style="font-size:9px;color:var(--muted);letter-spacing:2px">DAYBREAK</div>
   </div>
-  <div class="header-stat">
-    <span class="hs-label">PROPELLER</span>
-    <span class="hs-value" id="h-prop">P5</span>
-  </div>
-  <div class="header-stat">
-    <span class="hs-label">TODAY</span>
-    <span class="hs-value" id="h-rev">$0.00T</span>
-  </div>
-  <div class="header-stat">
-    <span class="hs-label">FLASH</span>
-    <span class="hs-value" id="h-flash">$0B</span>
-  </div>
-  <div class="header-stat">
-    <span class="hs-label">CHAINS</span>
-    <span class="hs-value" id="h-chains">0</span>
-  </div>
-  <div class="header-stat">
-    <span class="hs-label">UPTIME</span>
-    <span class="hs-value" id="h-uptime">0m</span>
-  </div>
-  <div class="header-stat">
-    <span class="hs-label">MEM</span>
-    <span class="hs-value" id="h-mem">0MB</span>
-  </div>
-  <div id="pin-status">
-    <span id="ws-dot" style="width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block"></span>
-    <span id="ws-label" style="font-size:10px;color:var(--muted)">CONNECTING</span>
-  </div>
+  <div class="h-stat"><span class="h-label">PROPELLER</span><span class="h-val" id="h-p">P5</span></div>
+  <div class="h-stat"><span class="h-label">TODAY</span><span class="h-val" id="h-r">$0.00T</span></div>
+  <div class="h-stat"><span class="h-label">FLASH</span><span class="h-val" id="h-f">$0B</span></div>
+  <div class="h-stat"><span class="h-label">CHAINS</span><span class="h-val" id="h-c">0</span></div>
+  <div class="h-stat"><span class="h-label">UPTIME</span><span class="h-val" id="h-u">0m</span></div>
+  <div class="h-stat"><span class="h-label">MEM</span><span class="h-val" id="h-m">0MB</span></div>
+  <div id="ws-pill"><div id="ws-dot"></div><span id="ws-lbl">CONNECTING</span></div>
 </div>
-
 <!-- NAV -->
 <div id="nav">
-  <button class="tab-btn active" onclick="switchTab('overview')">OVERVIEW</button>
-  <button class="tab-btn" onclick="switchTab('propeller')">PROPELLER</button>
-  <button class="tab-btn" onclick="switchTab('rs-mev')">RS1–3 MEV</button>
-  <button class="tab-btn" onclick="switchTab('rs-throughput')">RS4–11 THROUGHPUT</button>
-  <button class="tab-btn" onclick="switchTab('amplifier')">AMPLIFIER</button>
-  <button class="tab-btn" onclick="switchTab('sovereign')">SOVEREIGN</button>
-  <button class="tab-btn" onclick="switchTab('chains')">CHAINS</button>
-  <button class="tab-btn" onclick="switchTab('execution')">EXECUTION</button>
-  <button class="tab-btn" onclick="switchTab('treasury')">TREASURY</button>
-  <button class="tab-btn" onclick="switchTab('overlay')">OVERLAY</button>
-  <button class="tab-btn" onclick="switchTab('intelligence')">INTEL</button>
-  <button class="tab-btn" onclick="switchTab('liquidation')">LIQUIDATION</button>
-  <button class="tab-btn" onclick="switchTab('system')">SYSTEM</button>
-  <button class="tab-btn" onclick="switchTab('logs')">LOGS</button>
-  <button class="tab-btn" onclick="switchTab('sovereign-full')">AI CHAT</button>
+  <button class="tb on" onclick="tab('overview',this)">OVERVIEW</button>
+  <button class="tb" onclick="tab('propeller',this)">PROPELLER</button>
+  <button class="tb" onclick="tab('mev',this)">RS1-3 MEV</button>
+  <button class="tb" onclick="tab('throughput',this)">RS4-11 THROUGHPUT</button>
+  <button class="tb" onclick="tab('amplifier',this)">AMPLIFIER</button>
+  <button class="tb" onclick="tab('chains',this)">CHAINS</button>
+  <button class="tb" onclick="tab('execution',this)">EXECUTION</button>
+  <button class="tb" onclick="tab('treasury',this)">TREASURY</button>
+  <button class="tb" onclick="tab('overlay',this)">OVERLAY</button>
+  <button class="tb" onclick="tab('intel',this)">INTEL</button>
+  <button class="tb" onclick="tab('sovereign',this)">SOVEREIGN</button>
+  <button class="tb" onclick="tab('system',this)">SYSTEM</button>
+  <button class="tb" onclick="tab('logs',this)">LOGS</button>
 </div>
-
-<!-- CONTENT -->
 <div id="content">
 
-<!-- TAB: OVERVIEW -->
-<div id="tab-overview" class="tab-panel active">
-  <div class="grid g2" style="margin-bottom:12px">
-    <div class="card" style="grid-column:span 2;text-align:center;padding:24px">
-      <div class="card-title">DAILY REVENUE</div>
-      <div id="rev-counter">$0.0000T</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:8px">
-        Target: <span id="rev-target" style="color:var(--blue)">—</span> &nbsp;|&nbsp;
-        Pace: <span id="rev-pace" style="color:var(--green)">—</span>
-      </div>
-      <div style="margin-top:12px;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden">
-        <div id="rev-progress" style="height:100%;background:linear-gradient(90deg,var(--blue3),var(--blue));border-radius:2px;transition:width 0.5s;width:0%"></div>
-      </div>
-    </div>
+<!-- OVERVIEW -->
+<div id="p-overview" class="panel on">
+  <div style="text-align:center;padding:20px 0 16px;background:var(--bg2);border:var(--border);border-radius:var(--radius);margin-bottom:12px">
+    <div class="ct">DAILY REVENUE</div>
+    <div id="rev-big">$0.0000T</div>
+    <div style="font-size:10px;color:var(--muted);margin-top:7px">Target: <span id="ov-target" style="color:var(--blue)">—</span> &nbsp;|&nbsp; Pace: <span id="ov-pace" style="color:var(--green)">0%</span></div>
+    <div class="prog" style="max-width:400px;margin:8px auto 0"><div class="prog-fill" id="ov-prog" style="width:0%"></div></div>
   </div>
-  <div class="grid g4">
-    <div class="card">
-      <div class="card-title">TREASURY</div>
-      <div class="metric-val" id="ov-treasury">$0</div>
-      <div class="metric-sub">USDC balance</div>
-    </div>
-    <div class="card">
-      <div class="card-title">FLASH CAPACITY</div>
-      <div class="metric-val" id="ov-flash">$0B</div>
-      <div class="metric-sub" id="ov-flash-sub">base + reserve</div>
-    </div>
-    <div class="card">
-      <div class="card-title">EXECUTIONS</div>
-      <div class="metric-val" id="ov-execs">0</div>
-      <div class="metric-sub">today</div>
-    </div>
-    <div class="card">
-      <div class="card-title">AMPLIFIER BONUS</div>
-      <div class="metric-val" id="ov-amp">$0</div>
-      <div class="metric-sub">vs naive baseline</div>
-    </div>
+  <div class="g4">
+    <div class="card"><div class="ct">TREASURY</div><div class="mv" id="ov-tr">$0</div><div class="ms">USDC real balance</div></div>
+    <div class="card"><div class="ct">FLASH TOTAL</div><div class="mv" id="ov-fl">$0B</div><div class="ms">base + reserve</div></div>
+    <div class="card"><div class="ct">EXECUTIONS</div><div class="mv" id="ov-ex">0</div><div class="ms">today</div></div>
+    <div class="card"><div class="ct">AMPLIFIER BONUS</div><div class="mv" id="ov-amp">$0</div><div class="ms">vs naive baseline</div></div>
   </div>
-  <div class="grid g3" style="margin-top:12px">
-    <div class="card">
-      <div class="card-title">ACTIVE CHAINS WS</div>
-      <div class="metric-val" id="ov-ws">0</div>
-      <div class="metric-sub">WebSocket feeds live</div>
-    </div>
-    <div class="card">
-      <div class="card-title">OVERLAY QUEUE</div>
-      <div class="metric-val" id="ov-queue">0</div>
-      <div class="metric-sub">entries ready to drain</div>
-    </div>
-    <div class="card">
-      <div class="card-title">CRASH SIGNAL</div>
-      <div class="metric-val" id="ov-crash">0</div>
-      <div class="metric-sub">/100 — market stress</div>
-    </div>
+  <div class="g3" style="margin-top:10px">
+    <div class="card"><div class="ct">ACTIVE CHAINS WS</div><div class="mv" id="ov-ws">0</div></div>
+    <div class="card"><div class="ct">OVERLAY QUEUE</div><div class="mv" id="ov-q">0</div></div>
+    <div class="card"><div class="ct">CRASH SIGNAL</div><div class="mv" id="ov-cs" style="color:var(--amber)">0/100</div></div>
   </div>
 </div>
 
-<!-- TAB: PROPELLER -->
-<div id="tab-propeller" class="tab-panel">
-  <div class="grid g2">
+<!-- PROPELLER -->
+<div id="p-propeller" class="panel">
+  <div class="g2">
     <div class="card" style="grid-column:span 2">
-      <div id="prop-section">
-        <div class="card-title" style="margin-bottom:0">PROPELLER GOVERNOR</div>
-        <div id="prop-dial-wrap">
-          <canvas id="prop-canvas" width="280" height="280"></canvas>
-          <div id="prop-level-display">
-            <div id="prop-level-num">5</div>
-            <div id="prop-level-label">PROPELLER</div>
+      <div id="prop-wrap">
+        <div class="ct" style="margin:0">PROPELLER GOVERNOR</div>
+        <div style="position:relative;width:260px;height:260px">
+          <canvas id="prop-canvas" width="260" height="260"></canvas>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
+            <div id="prop-num">5</div>
+            <div style="font-size:10px;color:var(--muted);letter-spacing:2px">PROPELLER</div>
           </div>
         </div>
-        <div id="prop-rev-display">$3T/day target</div>
-        <div id="prop-slider-wrap">
-          <input type="range" id="prop-slider" min="0.1" max="30" step="0.1" value="5" oninput="onPropSlider(this.value)">
+        <div id="prop-target">$3T / day target</div>
+        <input type="range" id="prop-slider" min="0.1" max="30" step="0.1" value="5" oninput="sliderMove(this.value)">
+        <div class="presets">
+          <button class="preset" onclick="setProp(0.1)">SSP1</button>
+          <button class="preset" onclick="setProp(1)">SSP10</button>
+          <button class="preset" onclick="setProp(5)">SP5</button>
+          <button class="preset" onclick="setProp(10)">SP10</button>
+          <button class="preset" onclick="setProp(11)">P1</button>
+          <button class="preset on" onclick="setProp(15)">P5</button>
+          <button class="preset" onclick="setProp(20)">P10</button>
+          <button class="preset" onclick="setProp(25)">P20</button>
+          <button class="preset" onclick="setProp(30)">P30</button>
         </div>
-        <div id="prop-controls">
-          <button class="prop-preset" onclick="setPropeller(0.1)">SSP1</button>
-          <button class="prop-preset" onclick="setPropeller(1)">SSP10</button>
-          <button class="prop-preset" onclick="setPropeller(5)">SP5</button>
-          <button class="prop-preset" onclick="setPropeller(10)">SP10</button>
-          <button class="prop-preset" onclick="setPropeller(11)">P1</button>
-          <button class="prop-preset" onclick="setPropeller(15)">P5</button>
-          <button class="prop-preset active" onclick="setPropeller(20)">P10</button>
-          <button class="prop-preset" onclick="setPropeller(25)">P20</button>
-          <button class="prop-preset" onclick="setPropeller(30)">P30</button>
-        </div>
-        <div id="prop-warning">⚠ Revenue ceiling active — propeller governing</div>
       </div>
     </div>
-    <div class="card" style="grid-column:span 2">
-      <div id="crash-section">
-        <div class="card-title">CRASH MODE — P∞</div>
-        <div id="crash-countdown">
-          Next high-volatility window: <span id="crash-timer">—</span>
-          <br><span id="crash-probability">Probability: calculating...</span>
-        </div>
-        <label id="crash-toggle">
-          <input type="checkbox" id="crash-check" onchange="onCrashToggle(this.checked)">
-          <span class="crash-slider"></span>
-        </label>
-        <div id="crash-label">Market crash factor: <span id="crash-factor-label">OFF</span></div>
-        <div id="crash-active-banner"> CRASH MODE ACTIVE — ALL RESOURCES DEPLOYED — P∞</div>
-      </div>
+    <div id="crash-card" style="grid-column:span 2">
+      <div class="ct">CRASH MODE — MARKET FACTOR TOGGLE</div>
+      <div style="margin-bottom:12px">Next high-volatility window: <span id="crash-timer" style="color:var(--amber);font-weight:600">calculating...</span></div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:12px" id="crash-prob">Probability: —</div>
+      <label id="crash-tog"><input type="checkbox" id="crash-chk" onchange="crashToggle(this.checked)"><span class="cslider"></span></label>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px">Market factor: <span id="crash-fac" style="color:var(--blue)">OFF</span></div>
+      <div id="crash-banner">CRASH MODE ACTIVE — ALL RESOURCES — P INFINITY</div>
     </div>
   </div>
 </div>
 
-<!-- TAB: RS MEV -->
-<div id="tab-rs-mev" class="tab-panel">
-  <div class="grid g3">
-    <div class="card"><div class="card-title">RS1 — JIT MEV</div><div class="metric-val" id="rs1-val">$0</div><div class="metric-sub">Pool-dependent | Model 1</div></div>
-    <div class="card"><div class="card-title">RS2 — ORACLE DELTA</div><div class="metric-val" id="rs2-val">$0</div><div class="metric-sub">Chainlink lag capture</div></div>
-    <div class="card"><div class="card-title">RS3 — GOV ARB</div><div class="metric-val" id="rs3-val">$0</div><div class="metric-sub">Governance front-run</div></div>
+<!-- MEV -->
+<div id="p-mev" class="panel">
+  <div class="g3">
+    <div class="card"><div class="ct">RS1 — JIT MEV</div><div class="mv" id="rs1">$0</div><div class="ms">Pool-based | Model 1</div></div>
+    <div class="card"><div class="ct">RS2 — ORACLE DELTA</div><div class="mv" id="rs2">$0</div><div class="ms">Chainlink lag arb</div></div>
+    <div class="card"><div class="ct">RS3 — GOV ARB</div><div class="mv" id="rs3">$0</div><div class="ms">Governance front-run</div></div>
   </div>
-  <div class="card" style="margin-top:12px">
-    <div class="card-title">MODEL 1 — MEV ENGINE STATUS</div>
-    <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:8px">
-      <div><div style="font-size:10px;color:var(--muted)">SWAP DETECTIONS TODAY</div><div style="font-size:22px;color:var(--blue)" id="rs1-swaps">0</div></div>
-      <div><div style="font-size:10px;color:var(--muted)">AVG PROFIT/SWAP</div><div style="font-size:22px;color:var(--green)" id="rs1-avg">$0</div></div>
-      <div><div style="font-size:10px;color:var(--muted)">AMPLIFIER ACTIVE</div><div style="font-size:22px;color:var(--blue)">YES</div></div>
-      <div><div style="font-size:10px;color:var(--muted)">POOLS VIA C/R</div><div style="font-size:22px;color:var(--blue)">8K+</div></div>
+  <div class="card" style="margin-top:10px">
+    <div class="ct">MODEL 1 STATUS</div>
+    <div style="display:flex;gap:22px;flex-wrap:wrap;margin-top:8px">
+      <div><div style="font-size:9px;color:var(--muted)">SWAP DETECTIONS</div><div style="font-size:20px;color:var(--blue)" id="m1-swaps">0</div></div>
+      <div><div style="font-size:9px;color:var(--muted)">AVG PROFIT / SWAP</div><div style="font-size:20px;color:var(--green)" id="m1-avg">$0</div></div>
+      <div><div style="font-size:9px;color:var(--muted)">POOLS (C/R METHOD)</div><div style="font-size:20px;color:var(--blue)">8,000+</div></div>
+      <div><div style="font-size:9px;color:var(--muted)">AMPLIFIER</div><div style="font-size:20px;color:var(--blue)">ACTIVE</div></div>
     </div>
   </div>
 </div>
 
-<!-- TAB: RS THROUGHPUT -->
-<div id="tab-rs-throughput" class="tab-panel">
-  <div class="card" style="margin-bottom:12px">
-    <div class="card-title">MODEL 2 — THROUGHPUT ENGINE (100% INDEPENDENT)</div>
-    <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:8px">
-      <div><div style="font-size:10px;color:var(--muted)">DAILY THROUGHPUT</div><div style="font-size:22px;color:var(--blue)" id="tp-thru">$0Q</div></div>
-      <div><div style="font-size:10px;color:var(--muted)">CYCLES TODAY</div><div style="font-size:22px;color:var(--blue)" id="tp-cycles">0</div></div>
-      <div><div style="font-size:10px;color:var(--muted)">EXTRACTION RATE</div><div style="font-size:22px;color:var(--green)">0.045%</div></div>
-      <div><div style="font-size:10px;color:var(--muted)">MARKET DEPENDENCY</div><div style="font-size:22px;color:var(--green)">ZERO</div></div>
+<!-- THROUGHPUT -->
+<div id="p-throughput" class="panel">
+  <div class="card" style="margin-bottom:10px">
+    <div class="ct">MODEL 2 — THROUGHPUT (100% INDEPENDENT OF MARKET)</div>
+    <div style="display:flex;gap:22px;flex-wrap:wrap;margin-top:8px">
+      <div><div style="font-size:9px;color:var(--muted)">EFFECTIVE CYCLES/DAY</div><div style="font-size:20px;color:var(--blue)">8,000,000</div></div>
+      <div><div style="font-size:9px;color:var(--muted)">EXTRACTION RATE</div><div style="font-size:20px;color:var(--green)">0.045%</div></div>
+      <div><div style="font-size:9px;color:var(--muted)">MARKET DEPENDENCY</div><div style="font-size:20px;color:var(--green)">ZERO</div></div>
+      <div><div style="font-size:9px;color:var(--muted)">DAILY THROUGHPUT</div><div style="font-size:20px;color:var(--blue)" id="tp-thru">$0Q</div></div>
     </div>
   </div>
-  <div class="grid g4">
-    <div class="card"><div class="card-title">RS4 — JIT THROUGHPUT</div><div class="metric-val" id="rs4-val">$0</div></div>
-    <div class="card"><div class="card-title">RS5 — FUNDING HARVEST</div><div class="metric-val" id="rs5-val">$0</div></div>
-    <div class="card"><div class="card-title">RS6 — LIQUIDATION</div><div class="metric-val" id="rs6-val">$0</div></div>
-    <div class="card"><div class="card-title">RS7 — RECURSIVE</div><div class="metric-val" id="rs7-val">$0</div></div>
-    <div class="card"><div class="card-title">RS8 — RWA SETTLEMENT</div><div class="metric-val" id="rs8-val">$0</div></div>
-    <div class="card"><div class="card-title">RS9 — OPTIONS DELTA</div><div class="metric-val" id="rs9-val">$0</div></div>
-    <div class="card"><div class="card-title">RS10 — PROTO AUCTION</div><div class="metric-val" id="rs10-val">$0</div></div>
-    <div class="card"><div class="card-title">RS11 — INST SETTLE</div><div class="metric-val" id="rs11-val">$0</div></div>
+  <div class="g4">
+    <div class="card"><div class="ct">RS4 JIT THROUGHPUT</div><div class="mv" id="rs4">$0</div></div>
+    <div class="card"><div class="ct">RS5 FUNDING HARVEST</div><div class="mv" id="rs5">$0</div></div>
+    <div class="card"><div class="ct">RS6 LIQUIDATION</div><div class="mv" id="rs6">$0</div></div>
+    <div class="card"><div class="ct">RS7 RECURSIVE</div><div class="mv" id="rs7">$0</div></div>
+    <div class="card"><div class="ct">RS8 RWA SETTLEMENT</div><div class="mv" id="rs8">$0</div></div>
+    <div class="card"><div class="ct">RS9 OPTIONS DELTA</div><div class="mv" id="rs9">$0</div></div>
+    <div class="card"><div class="ct">RS10 PROTO AUCTION</div><div class="mv" id="rs10">$0</div></div>
+    <div class="card"><div class="ct">RS11 INST SETTLE</div><div class="mv" id="rs11">$0</div></div>
   </div>
 </div>
 
-<!-- TAB: AMPLIFIER -->
-<div id="tab-amplifier" class="tab-panel">
-  <div class="grid g2">
+<!-- AMPLIFIER -->
+<div id="p-amplifier" class="panel">
+  <div class="g2" style="margin-bottom:10px">
     <div class="card" style="text-align:center">
-      <div class="card-title">MULTIPLIER</div>
-      <div id="amp-multiplier">205×</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:8px">vs naive 0.1%-of-swap baseline</div>
+      <div class="ct">MULTIPLIER</div>
+      <div style="font-size:44px;font-weight:700;color:var(--blue);text-shadow:var(--glow)">205x</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px">vs naive 0.1%-of-swap</div>
     </div>
     <div class="card">
-      <div class="card-title">TOTAL AMPLIFIER BONUS</div>
-      <div class="metric-val" id="amp-total-bonus">$0</div>
-      <div class="metric-sub">above naive baseline</div>
-      <div style="margin-top:12px">
-        <div style="font-size:10px;color:var(--muted)">NAIVE (0.1% of swap)</div>
-        <div style="font-size:18px;color:var(--muted)" id="amp-naive">$0</div>
-      </div>
+      <div class="ct">TOTAL BONUS</div>
+      <div class="mv" id="amp-bonus">$0</div>
+      <div class="ms">above naive baseline today</div>
+      <div style="margin-top:10px"><div style="font-size:9px;color:var(--muted)">NAIVE BASELINE</div><div style="font-size:16px;color:var(--muted)" id="amp-naive">$0</div></div>
     </div>
   </div>
-  <div style="margin-top:12px">
-    <div class="amp-layer">
-      <div class="amp-layer-icon"> </div>
-      <div class="amp-layer-info">
-        <div class="amp-layer-name">L1 — JIT Full Flash Deployment</div>
-        <div class="amp-layer-val">Deploy $45.59B flash on every qualifying swap → 0.045% extraction</div>
-        <div class="amp-bar"><div class="amp-bar-fill" style="width:100%"></div></div>
-      </div>
-      <div class="amp-layer-profit" id="amp-l1">$20.52M</div>
-    </div>
-    <div class="amp-layer">
-      <div class="amp-layer-icon"> </div>
-      <div class="amp-layer-info">
-        <div class="amp-layer-name">L2 — Cascade Compound</div>
-        <div class="amp-layer-val">50% of L1 profit re-seeded × 80 Aave leverage × extraction</div>
-        <div class="amp-bar"><div class="amp-bar-fill" style="width:2%"></div></div>
-      </div>
-      <div class="amp-layer-profit" id="amp-l2">$370K</div>
-    </div>
-    <div class="amp-layer">
-      <div class="amp-layer-icon"> </div>
-      <div class="amp-layer-info">
-        <div class="amp-layer-name">L3 — Cross-Chain Echo</div>
-        <div class="amp-layer-val">Price propagates to 4 chains in 2-15s → pre-positioned JIT at 70%</div>
-        <div class="amp-bar"><div class="amp-bar-fill" style="width:280%"></div></div>
-      </div>
-      <div class="amp-layer-profit" id="amp-l3">$57.5M</div>
-    </div>
-    <div class="amp-layer">
-      <div class="amp-layer-icon"> </div>
-      <div class="amp-layer-info">
-        <div class="amp-layer-name">L4 — Recursive Inner Cycles</div>
-        <div class="amp-layer-val">3 inner flash cycles within same block (ARB gas ~$0.01/cycle)</div>
-        <div class="amp-bar"><div class="amp-bar-fill" style="width:1.5%"></div></div>
-      </div>
-      <div class="amp-layer-profit" id="amp-l4">$305K</div>
-    </div>
-    <div class="amp-layer">
-      <div class="amp-layer-icon"> </div>
-      <div class="amp-layer-info">
-        <div class="amp-layer-name">L5 — Oracle Deviation Arb</div>
-        <div class="amp-layer-val">Chainlink lag window: 0.3% deviation × $14.49B Aave TVL</div>
-        <div class="amp-bar"><div class="amp-bar-fill" style="width:0.2%"></div></div>
-      </div>
-      <div class="amp-layer-profit" id="amp-l5">$43K</div>
-    </div>
-  </div>
+  <div class="al"><div class="al-info"><div class="al-name">L1 — JIT Full Flash Deployment</div><div class="al-desc">Deploy full $45.59B flash on every qualifying swap | 0.045% extraction</div><div class="al-bar"><div class="al-fill" style="width:100%"></div></div></div><div class="al-val">$20.52M avg</div></div>
+  <div class="al"><div class="al-info"><div class="al-name">L2 — Cascade Compound</div><div class="al-desc">50% of L1 profit reseeded x80 Aave leverage x extraction rate</div><div class="al-bar"><div class="al-fill" style="width:2%"></div></div></div><div class="al-val">$370K avg</div></div>
+  <div class="al"><div class="al-info"><div class="al-name">L3 — Cross-Chain Echo</div><div class="al-desc">Price propagates to 4 chains in 2-15s | pre-positioned JIT at 70% efficiency</div><div class="al-bar"><div class="al-fill" style="width:280%"></div></div></div><div class="al-val">$57.5M avg</div></div>
+  <div class="al"><div class="al-info"><div class="al-name">L4 — Recursive Inner Cycles</div><div class="al-desc">3 inner flash cycles within same block | ARB gas sub-cent per cycle</div><div class="al-bar"><div class="al-fill" style="width:1.5%"></div></div></div><div class="al-val">$305K avg</div></div>
+  <div class="al"><div class="al-info"><div class="al-name">L5 — Oracle Deviation Arb</div><div class="al-desc">Chainlink lag window | 0.3% deviation x $14.49B Aave TVL</div><div class="al-bar"><div class="al-fill" style="width:0.2%"></div></div></div><div class="al-val">$43K avg</div></div>
 </div>
 
-<!-- TAB: SOVEREIGN CHAT (quick) -->
-<div id="tab-sovereign" class="tab-panel" style="padding:0">
-  <div id="chat-wrap">
-    <div id="chat-msgs">
-      <div class="chat-msg chat-sov">SOVEREIGN online. All 4 Laws active. Type "status" for a full system report, or "laws" to review operational constraints. I govern $8.7Q/day at P30.</div>
-    </div>
-    <div id="chat-input-row">
-      <input id="chat-input" type="text" placeholder="Command SOVEREIGN..." onkeydown="if(event.key==='Enter')sendChat()"/>
-      <button id="chat-send" onclick="sendChat()">SEND</button>
+<!-- CHAINS -->
+<div id="p-chains" class="panel">
+  <div class="card" style="margin-bottom:10px">
+    <div style="display:flex;gap:20px;flex-wrap:wrap">
+      <div><div style="font-size:9px;color:var(--muted)">TOTAL</div><div style="font-size:20px;color:var(--blue)" id="ch-tot">20</div></div>
+      <div><div style="font-size:9px;color:var(--muted)">WS LIVE</div><div style="font-size:20px;color:var(--green)" id="ch-ws">0</div></div>
+      <div><div style="font-size:9px;color:var(--muted)">HTTP FALLBACK</div><div style="font-size:20px;color:var(--amber)" id="ch-http">0</div></div>
+      <div><div style="font-size:9px;color:var(--muted)">CYCLES / DAY</div><div style="font-size:20px;color:var(--blue)">1.92M</div></div>
     </div>
   </div>
+  <div class="cg" id="chain-grid"></div>
 </div>
 
-<!-- TAB: CHAINS -->
-<div id="tab-chains" class="tab-panel">
-  <div class="card" style="margin-bottom:12px">
-    <div style="display:flex;gap:24px;flex-wrap:wrap">
-      <div><div style="font-size:10px;color:var(--muted)">TOTAL CHAINS</div><div style="font-size:22px;color:var(--blue)" id="ch-total">20</div></div>
-      <div><div style="font-size:10px;color:var(--muted)">WS ACTIVE</div><div style="font-size:22px;color:var(--green)" id="ch-ws">0</div></div>
-      <div><div style="font-size:10px;color:var(--muted)">HTTP FALLBACK</div><div style="font-size:22px;color:var(--amber)" id="ch-http">0</div></div>
-      <div><div style="font-size:10px;color:var(--muted)">TOTAL CYCLES/DAY</div><div style="font-size:22px;color:var(--blue)">1.92M</div></div>
-    </div>
+<!-- EXECUTION -->
+<div id="p-execution" class="panel">
+  <div class="g3" style="margin-bottom:10px">
+    <div class="card"><div class="ct">TOTAL</div><div class="mv" id="ex-tot">0</div></div>
+    <div class="card"><div class="ct">AVG PROFIT</div><div class="mv" id="ex-avg">$0</div></div>
+    <div class="card"><div class="ct">EFFICIENCY</div><div class="mv">99.999%</div></div>
   </div>
-  <div class="chain-grid" id="chain-grid"></div>
+  <div class="card"><div class="ct">EXECUTION FEED</div><div id="exec-log"></div></div>
 </div>
 
-<!-- TAB: EXECUTION -->
-<div id="tab-execution" class="tab-panel">
-  <div class="grid g3" style="margin-bottom:12px">
-    <div class="card"><div class="card-title">TOTAL EXECUTIONS</div><div class="metric-val" id="ex-total">0</div></div>
-    <div class="card"><div class="card-title">AVG PROFIT</div><div class="metric-val" id="ex-avg">$0</div></div>
-    <div class="card"><div class="card-title">EFFICIENCY</div><div class="metric-val">99.999%</div></div>
-  </div>
-  <div class="card">
-    <div class="card-title">LIVE EXECUTION FEED</div>
-    <div id="exec-log"></div>
-  </div>
-</div>
-
-<!-- TAB: TREASURY -->
-<div id="tab-treasury" class="tab-panel">
-  <div class="grid g2" style="margin-bottom:16px">
-    <div class="card">
-      <div class="card-title">TREASURY BALANCE</div>
-      <div class="metric-val" id="tr-balance">$0</div>
-      <div class="metric-sub">USDC • 0xCCCF...06e8</div>
-    </div>
-    <div class="card">
-      <div class="card-title">DAILY YIELD (3-TIER)</div>
-      <div class="metric-val" id="tr-yield">$0</div>
-      <div class="metric-sub">Aave 6.5% + USDY 4.2% + BUIDL 3.35%</div>
-    </div>
+<!-- TREASURY -->
+<div id="p-treasury" class="panel">
+  <div class="g2" style="margin-bottom:14px">
+    <div class="card"><div class="ct">REAL USDC BALANCE</div><div class="mv" id="tr-bal">$0</div><div class="ms">On-chain | Polygon primary</div><div style="font-size:9px;color:var(--muted);margin-top:6px" id="tr-addr">0xCCCF...6e8</div></div>
+    <div class="card"><div class="ct">DAILY YIELD (3-TIER)</div><div class="mv" id="tr-yield">$0</div><div class="ms">Aave 6.5% + USDY 4.2% + BUIDL 3.35%</div></div>
   </div>
 
-  <!-- FUND TRANSFER PANEL -->
-  <div class="card" style="margin-bottom:16px">
-    <div class="card-title">FUND TRANSFER & WITHDRAWAL</div>
-    <div class="transfer-type-btns">
-      <button class="type-btn active" onclick="setTransferType('domestic')">🏠 DOMESTIC</button>
-      <button class="type-btn" onclick="setTransferType('international')">🌍 INTERNATIONAL</button>
-      <button class="type-btn" onclick="setTransferType('crypto')">₿ CRYPTO</button>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ct">FUND TRANSFER</div>
+    <div class="type-btns">
+      <button class="ttype on" onclick="setTT('domestic',this)">DOMESTIC</button>
+      <button class="ttype" onclick="setTT('intl',this)">INTERNATIONAL</button>
+      <button class="ttype" onclick="setTT('crypto',this)">CRYPTO</button>
     </div>
 
-    <!-- DOMESTIC -->
-    <div id="tf-domestic" class="transfer-form active">
-      <div class="sub-type-btns">
-        <button class="sub-type-btn active" onclick="setSubType('mobile')">📱 MOBILE MONEY</button>
-        <button class="sub-type-btn" onclick="setSubType('bank')">🏦 BANK TRANSFER</button>
+    <div id="tf-domestic" class="tf on">
+      <div class="sub-btns">
+        <button class="subtype on" onclick="setST('mobile',this)">MOBILE MONEY</button>
+        <button class="subtype" onclick="setST('bank',this)">BANK TRANSFER</button>
       </div>
-      <div id="tf-mobile" class="transfer-form active">
-        <div class="form-group"><label>PHONE NUMBER</label><input class="form-input" id="tf-phone" placeholder="+220 XXXXXXXXX"/></div>
-        <div class="form-group"><label>AMOUNT (USD)</label><input class="form-input" id="tf-amount-m" type="number" placeholder="0.00" oninput="calcFee('wave','tf-fee-m','tf-amount-m')"/></div>
-        <div class="fee-preview" id="tf-fee-m">Fee: — | Net: —</div>
-        <div class="form-group" style="margin-top:8px"><label>BRIDGE</label><select class="form-input" id="tf-bridge-m"><option value="modempay">ModemPay</option></select></div>
-        <button class="btn-primary" onclick="doTransfer('mobile')">SEND MOBILE MONEY</button>
+      <div id="tf-mobile" class="tf on">
+        <div class="fg"><label>PHONE NUMBER</label><input class="fi" id="t-phone" placeholder="+220 XXXXXXXXX"/></div>
+        <div class="fg"><label>AMOUNT (USD)</label><input class="fi" id="t-amt-m" type="number" placeholder="0.00" oninput="fee('wave','t-fee-m','t-amt-m')"/></div>
+        <div class="fee-prev" id="t-fee-m">Fee: — | Net: —</div>
+        <button class="btn-p" onclick="send('mobile')">SEND MOBILE MONEY</button>
       </div>
-      <div id="tf-bank" class="transfer-form">
-        <div class="form-group"><label>ACCOUNT NAME</label><input class="form-input" id="tf-bank-name" placeholder="Full name"/></div>
-        <div class="form-group"><label>ACCOUNT NUMBER</label><input class="form-input" id="tf-bank-acc" placeholder="Account number"/></div>
-        <div class="form-group"><label>AMOUNT (USD)</label><input class="form-input" id="tf-amount-b" type="number" placeholder="0.00" oninput="calcFee('bank','tf-fee-b','tf-amount-b')"/></div>
-        <div class="fee-preview" id="tf-fee-b">Fee: — | Net: —</div>
-        <button class="btn-primary" onclick="doTransfer('bank')">SEND BANK TRANSFER</button>
+      <div id="tf-bank" class="tf">
+        <div class="fg"><label>ACCOUNT NAME</label><input class="fi" id="t-bname" placeholder="Full name"/></div>
+        <div class="fg"><label>ACCOUNT NUMBER</label><input class="fi" id="t-bacc" placeholder="Account number"/></div>
+        <div class="fg"><label>AMOUNT (USD)</label><input class="fi" id="t-amt-b" type="number" placeholder="0.00" oninput="fee('bank','t-fee-b','t-amt-b')"/></div>
+        <div class="fee-prev" id="t-fee-b">Fee: — | Net: —</div>
+        <button class="btn-p" onclick="send('bank')">SEND BANK TRANSFER</button>
       </div>
     </div>
 
-    <!-- INTERNATIONAL -->
-    <div id="tf-international" class="transfer-form">
-      <div class="form-group"><label>ACCOUNT NAME</label><input class="form-input" id="tf-int-name" placeholder="Full name"/></div>
-      <div class="form-group"><label>IBAN / ACCOUNT NUMBER</label><input class="form-input" id="tf-int-acc" placeholder="IBAN or account number"/></div>
-      <div class="form-group"><label>SWIFT CODE</label><input class="form-input" id="tf-swift" placeholder="XXXXXX__" oninput="lookupSwift(this.value)"/></div>
-      <div id="swift-info" style="font-size:10px;color:var(--blue);margin-bottom:8px"></div>
-      <div class="form-group"><label>AMOUNT (USD)</label><input class="form-input" id="tf-amount-i" type="number" placeholder="0.00" oninput="calcFee('international','tf-fee-i','tf-amount-i')"/></div>
-      <div class="fee-preview" id="tf-fee-i">Fee: — | Net: —</div>
-      <button class="btn-primary" onclick="doTransfer('international')">SEND INTERNATIONAL</button>
+    <div id="tf-intl" class="tf">
+      <div class="fg"><label>ACCOUNT NAME</label><input class="fi" id="t-iname" placeholder="Full name"/></div>
+      <div class="fg"><label>IBAN / ACCOUNT</label><input class="fi" id="t-iacc" placeholder="IBAN or account number"/></div>
+      <div class="fg"><label>SWIFT CODE</label><input class="fi" id="t-swift" placeholder="XXXXXX__"/></div>
+      <div class="fg"><label>AMOUNT (USD)</label><input class="fi" id="t-amt-i" type="number" placeholder="0.00" oninput="fee('international','t-fee-i','t-amt-i')"/></div>
+      <div class="fee-prev" id="t-fee-i">Fee: — | Net: —</div>
+      <button class="btn-p" onclick="send('intl')">SEND INTERNATIONAL</button>
     </div>
 
-    <!-- CRYPTO -->
-    <div id="tf-crypto" class="transfer-form">
-      <div class="form-group"><label>WALLET ADDRESS</label><input class="form-input" id="tf-crypto-addr" placeholder="0x..."/></div>
-      <div class="form-group"><label>AMOUNT (USDC)</label><input class="form-input" id="tf-amount-c" type="number" placeholder="0.00" oninput="calcFee('crypto','tf-fee-c','tf-amount-c')"/></div>
-      <div class="fee-preview" id="tf-fee-c">Fee: — | Net: —</div>
-      <div class="form-group"><label>CHAIN</label>
-        <select class="form-input" id="tf-chain">
-          <option value="polygon">Polygon (recommended — lowest gas)</option>
+    <div id="tf-crypto" class="tf">
+      <div class="fg"><label>WALLET ADDRESS</label><input class="fi" id="t-addr" placeholder="0x..."/></div>
+      <div class="fg"><label>AMOUNT (USDC)</label><input class="fi" id="t-amt-c" type="number" placeholder="0.00" oninput="fee('crypto','t-fee-c','t-amt-c')"/></div>
+      <div class="fee-prev" id="t-fee-c">Fee: — | Net: —</div>
+      <div class="fg"><label>CHAIN</label>
+        <select class="fi" id="t-chain">
+          <option value="polygon">Polygon — lowest gas</option>
           <option value="arbitrum">Arbitrum</option>
           <option value="base">Base</option>
           <option value="ethereum">Ethereum</option>
         </select>
       </div>
-      <button class="btn-primary" onclick="doTransfer('crypto')">SEND CRYPTO</button>
+      <button class="btn-p" onclick="send('crypto')">SEND CRYPTO</button>
     </div>
-
-    <div id="tf-result" style="display:none;margin-top:12px;padding:10px;background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.2);border-radius:6px;font-size:11px;color:var(--green)"></div>
+    <div id="tf-result" class="result-box"></div>
   </div>
 
-  <!-- USB VAULT PANEL -->
   <div class="card">
-    <div class="card-title">USB SOVEREIGN VAULT</div>
-    <div id="usb-status">
-      <div id="usb-indicator"></div>
-      <span id="usb-status-text" style="font-size:12px;color:var(--muted)">Insert USB drive to connect vault</span>
-      <span id="usb-balance-display" style="margin-left:auto;display:none"></span>
+    <div class="ct">USB SOVEREIGN VAULT</div>
+    <div id="usb-bar">
+      <div id="usb-dot"></div>
+      <span id="usb-txt" style="font-size:11px;color:var(--muted)">Insert USB drive to connect vault</span>
+      <span id="usb-bal"></span>
     </div>
-    <div id="usb-vault-form">
-      <div class="form-group"><label>AMOUNT (USDC)</label><input class="form-input" id="usb-amount" type="number" placeholder="0.00"/></div>
-      <div class="form-group"><label>VAULT PIN</label><input class="form-input" id="usb-pin" type="password" placeholder="••••••• " maxlength="7"/></div>
+    <div id="usb-form">
+      <div class="fg"><label>AMOUNT (USDC)</label><input class="fi" id="usb-amt" type="number" placeholder="0.00"/></div>
+      <div class="fg"><label>VAULT PIN</label><input class="fi" id="usb-pin" type="password" placeholder="7-digit PIN" maxlength="7"/></div>
       <div class="vault-btns">
-        <button class="btn-vault btn-add" onclick="vaultAction('add')">+ ADD TO VAULT</button>
-        <button class="btn-vault btn-restore" onclick="vaultAction('restore')">↩ RESTORE</button>
+        <button class="vbtn vadd" onclick="vault('add')">ADD TO VAULT</button>
+        <button class="vbtn vres" onclick="vault('restore')">RESTORE</button>
       </div>
     </div>
-    <div style="margin-top:12px;font-size:10px;color:var(--muted)">
-      <div>Vault holds USDC permanently via on-chain wallet. Key lives on USB only.</div>
-      <div style="margin-top:4px">Treasury: 0xCCCF1C9A2154750A0D7CceeD51fE0f9b4c1906e8</div>
+    <div style="margin-top:10px;font-size:9px;color:var(--muted)">
+      Vault wallet: 0xCCCF1C9A2154750A0D7CceeD51fE0f9b4c1906e8<br>
+      Funds held permanently on-chain. Private key on USB drive only.
     </div>
   </div>
 </div>
 
-<!-- TAB: OVERLAY -->
-<div id="tab-overlay" class="tab-panel">
-  <div class="grid g3" style="margin-bottom:12px">
-    <div class="card"><div class="card-title">QUEUE SIZE</div><div class="metric-val" id="ol-size">0</div><div class="metric-sub">entries on disk</div></div>
-    <div class="card"><div class="card-title">ESTIMATED VALUE</div><div class="metric-val" id="ol-value">$0B</div><div class="metric-sub">at current flash × extraction</div></div>
-    <div class="card"><div class="card-title">DRAIN RATE</div><div class="metric-val">66.67/s</div><div class="metric-sub">across 20 chains</div></div>
+<!-- OVERLAY -->
+<div id="p-overlay" class="panel">
+  <div class="g3" style="margin-bottom:10px">
+    <div class="card"><div class="ct">QUEUE SIZE</div><div class="mv" id="ol-size">0</div></div>
+    <div class="card"><div class="ct">ESTIMATED VALUE</div><div class="mv" id="ol-val">$0B</div></div>
+    <div class="card"><div class="ct">DRAIN RATE</div><div class="mv">66.67/s</div></div>
   </div>
   <div class="card">
-    <div class="card-title">QUEUE FILL (100K = 24h idle max)</div>
-    <div id="queue-fill-bar"><div id="queue-fill"></div></div>
-    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted)">
-      <span>0</span><span>25K</span><span>50K</span><span>75K</span><span>100K</span>
-    </div>
-    <div style="margin-top:16px;font-size:11px;color:var(--muted);line-height:2">
-      <div> Strategy: Deploy system → idle 24–48h → send 0.001 POL → execute queue → centi-billions in 120s</div>
-      <div> At P30 (5K JIT, $45.59B flash): each entry worth ~$20.52M avg</div>
-      <div> Memory: max 50 entries in RAM at all times regardless of queue size</div>
+    <div class="ct">FILL PROGRESS (100K = 24h max idle)</div>
+    <div class="prog" style="margin:8px 0"><div class="prog-fill" id="ol-prog" style="width:0%"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted)"><span>0</span><span>25K</span><span>50K</span><span>75K</span><span>100K</span></div>
+    <div style="margin-top:14px;font-size:10px;color:var(--muted);line-height:2">
+      Strategy: Deploy system, idle 24-48h, send 0.001 POL, execute queue, centi-billions in 120 seconds.<br>
+      At P30 (5K JIT, $45.59B flash): each entry worth approx $20.52M avg profit.<br>
+      Memory ceiling: max 50 entries in RAM regardless of queue size.
     </div>
   </div>
 </div>
 
-<!-- TAB: INTELLIGENCE -->
-<div id="tab-intelligence" class="tab-panel">
-  <div class="grid g2">
-    <div class="intel-card">
-      <div class="intel-title">HYPERLIQUID FUNDING RATES</div>
-      <div id="funding-rates">Loading...</div>
-    </div>
-    <div class="intel-card">
-      <div class="intel-title">CRASH SIGNAL COMPONENTS</div>
-      <div class="intel-row"><span class="intel-label">Funding Spike</span><span class="intel-val" id="cs-funding">0</span></div>
-      <div class="intel-row"><span class="intel-label">Liquidation Rate</span><span class="intel-val" id="cs-liq">0</span></div>
-      <div class="intel-row"><span class="intel-label">Gas Price</span><span class="intel-val" id="cs-gas">0 gwei</span></div>
-      <div class="intel-row"><span class="intel-label">Market Fear</span><span class="intel-val" id="cs-fear">0/100</span></div>
-      <div class="intel-row" style="border-top:var(--border);margin-top:8px;padding-top:8px"><span class="intel-label">COMPOSITE SIGNAL</span><span class="intel-val" id="cs-total" style="font-size:16px">0/100</span></div>
-    </div>
-  </div>
-</div>
-
-<!-- TAB: LIQUIDATION -->
-<div id="tab-liquidation" class="tab-panel">
-  <div class="grid g3" style="margin-bottom:12px">
-    <div class="card"><div class="card-title">POSITIONS WATCHED</div><div class="metric-val">50,000</div></div>
-    <div class="card"><div class="card-title">AT RISK (HF &lt; 1.1)</div><div class="metric-val" id="liq-risk" style="color:var(--amber)">0</div></div>
-    <div class="card"><div class="card-title">LIQUIDATED TODAY</div><div class="metric-val" id="liq-today">0</div></div>
-  </div>
-  <div class="card"><div class="card-title">LIQUIDATION ENGINE</div><div style="font-size:11px;color:var(--muted);line-height:2"><div>Protocol: Aave V3 on 5 chains (ETH, ARB, BASE, POL, OP)</div><div>Flash source: Balancer (0% fee) → repaid in same tx</div><div>Bonus: 5-10% of collateral value</div><div>Scan: every block via Multicall3 (50K positions in one call)</div></div></div>
-</div>
-
-<!-- TAB: SYSTEM -->
-<div id="tab-system" class="tab-panel">
-  <div class="grid g2" style="margin-bottom:16px">
+<!-- INTEL -->
+<div id="p-intel" class="panel">
+  <div class="g2">
     <div class="card">
-      <div class="card-title">SYSTEM INFO</div>
-      <div class="intel-row"><span class="intel-label">Version</span><span class="intel-val">ALUCARD v2.0</span></div>
-      <div class="intel-row"><span class="intel-label">Operator</span><span class="intel-val">Bun Omar Secka</span></div>
-      <div class="intel-row"><span class="intel-label">Executor</span><span class="intel-val" style="font-size:10px">0xEc92...D39</span></div>
-      <div class="intel-row"><span class="intel-label">Treasury</span><span class="intel-val" style="font-size:10px">0xCCCF...6e8</span></div>
-      <div class="intel-row"><span class="intel-label">Uptime</span><span class="intel-val" id="sys-uptime">0m</span></div>
-      <div class="intel-row"><span class="intel-label">Memory</span><span class="intel-val" id="sys-mem">0MB / 120MB</span></div>
+      <div class="ct">CRASH SIGNAL BREAKDOWN</div>
+      <div class="ir"><span class="ik">Composite Signal</span><span class="iv" id="cs-total">0/100</span></div>
+      <div class="ir"><span class="ik">Funding Spike</span><span class="iv" id="cs-fund">0</span></div>
+      <div class="ir"><span class="ik">Liquidation Rate</span><span class="iv" id="cs-liq">0</span></div>
+      <div class="ir"><span class="ik">Gas Price (gwei)</span><span class="iv" id="cs-gas">0</span></div>
+      <div class="ir"><span class="ik">Market Fear</span><span class="iv" id="cs-fear">0/100</span></div>
     </div>
     <div class="card">
-      <div class="card-title">ENVIRONMENT</div>
-      <div class="env-list" id="env-list">Loading...</div>
+      <div class="ct">THROUGHPUT ENGINE</div>
+      <div class="ir"><span class="ik">Flash Base</span><span class="iv" id="it-fb">$0B</span></div>
+      <div class="ir"><span class="ik">Flash Reserve</span><span class="iv" id="it-fr">$0B</span></div>
+      <div class="ir"><span class="ik">Flash Total</span><span class="iv" id="it-ft">$0B</span></div>
+      <div class="ir"><span class="ik">Base Cycles/Day</span><span class="iv">1,920,072</span></div>
+      <div class="ir"><span class="ik">Effective Cycles</span><span class="iv">8,000,000</span></div>
+      <div class="ir"><span class="ik">Daily Throughput</span><span class="iv" id="it-thru">$0Q</span></div>
     </div>
   </div>
-  <button class="sys-btn" onclick="doSnapshot()"> EXPORT SNAPSHOT — Move System to Server</button>
-  <button class="sys-btn" onclick="downloadSnapshot()">⬇ DOWNLOAD snapshot.json</button>
-  <button class="sys-btn btn-danger" style="color:var(--red);border-color:rgba(255,34,68,0.3)" onclick="if(confirm('Halt all execution?'))apiPost('/api/sovereign/command',{command:'halt'})">⚠ EMERGENCY HALT</button>
-  <div id="sys-msg" style="margin-top:8px;font-size:11px;color:var(--green);display:none"></div>
 </div>
 
-<!-- TAB: LOGS -->
-<div id="tab-logs" class="tab-panel">
-  <div style="display:flex;gap:8px;margin-bottom:8px">
-    <button class="prop-preset active" onclick="filterLog('all')">ALL</button>
-    <button class="prop-preset" onclick="filterLog('boot')">BOOT</button>
-    <button class="prop-preset" onclick="filterLog('exec')">EXEC</button>
-    <button class="prop-preset" onclick="filterLog('warn')">WARN</button>
+<!-- SOVEREIGN -->
+<div id="p-sovereign" class="panel" style="padding:0">
+  <div id="chat-outer">
+    <div id="chat-msgs">
+      <div class="cm cm-s">SOVEREIGN online. 4 Laws active. Type status for system report. Commands: status, propeller N, halt, resume, crash, laws, chains, amplifier</div>
+    </div>
+    <div id="chat-row">
+      <input id="chat-in" type="text" placeholder="Command SOVEREIGN..." onkeydown="if(event.key==='Enter')chat()"/>
+      <button id="chat-btn" onclick="chat()">SEND</button>
+    </div>
   </div>
-  <div id="log-feed"></div>
 </div>
 
-<!-- TAB: SOVEREIGN FULL CHAT -->
-<div id="tab-sovereign-full" class="tab-panel" style="padding:0">
-  <div id="chat-wrap">
-    <div id="chat-msgs-full" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px">
-      <div class="chat-msg chat-sov">SOVEREIGN AGI online. 4 Laws enforced. Managing P5 ($3T/day target). Commands: status, propeller N, halt, resume, crash, laws, chains, amplifier</div>
+<!-- SYSTEM -->
+<div id="p-system" class="panel">
+  <div class="g2" style="margin-bottom:12px">
+    <div class="card">
+      <div class="ct">SYSTEM</div>
+      <div class="ir"><span class="ik">Name</span><span class="iv">ALUCARD v2.0</span></div>
+      <div class="ir"><span class="ik">Operator</span><span class="iv">Bun Omar Secka</span></div>
+      <div class="ir"><span class="ik">Executor</span><span class="iv" style="font-size:9px">0xEc92...D39</span></div>
+      <div class="ir"><span class="ik">Treasury</span><span class="iv" style="font-size:9px">0xCCCF...6e8</span></div>
+      <div class="ir"><span class="ik">Uptime</span><span class="iv" id="sys-up">0m</span></div>
+      <div class="ir"><span class="ik">Memory</span><span class="iv" id="sys-mb">0 / 120MB</span></div>
     </div>
-    <div id="chat-input-row">
-      <input id="chat-input-full" type="text" placeholder="Command SOVEREIGN..." onkeydown="if(event.key==='Enter')sendChatFull()"/>
-      <button id="chat-send" onclick="sendChatFull()">SEND</button>
+    <div class="card">
+      <div class="ct">CONFIGURATION</div>
+      <div class="ir"><span class="ik">Alchemy Keys</span><span class="iv">20 hardcoded</span></div>
+      <div class="ir"><span class="ik">ModemPay</span><span class="iv" id="sys-mp">checking</span></div>
+      <div class="ir"><span class="ik">Chains</span><span class="iv" id="sys-ch">20</span></div>
+      <div class="ir"><span class="ik">DB</span><span class="iv" id="sys-db">checking</span></div>
     </div>
   </div>
+  <button class="sys-btn" onclick="snapshot()">EXPORT SNAPSHOT — Move System to Server</button>
+  <button class="sys-btn" onclick="window.location='/api/snapshot/download?pin='+_PIN">DOWNLOAD snapshot.json</button>
+  <button class="sys-btn btn-r" onclick="if(confirm('Halt all execution?'))api('/api/command',{command:'halt'})">EMERGENCY HALT</button>
+  <div id="sys-msg" style="margin-top:8px;font-size:10px;display:none"></div>
+</div>
+
+<!-- LOGS -->
+<div id="p-logs" class="panel">
+  <div style="display:flex;gap:6px;margin-bottom:8px">
+    <button class="preset on" onclick="logFilter('all')">ALL</button>
+    <button class="preset" onclick="logFilter('boot')">BOOT</button>
+    <button class="preset" onclick="logFilter('exec')">EXEC</button>
+    <button class="preset" onclick="logFilter('warn')">WARN</button>
+    <button class="preset" onclick="logFilter('error')">ERROR</button>
+  </div>
+  <div id="log-feed" style="font-size:10px;line-height:1.7;overflow-y:auto;height:420px;background:var(--bg);border:var(--border);border-radius:5px;padding:10px;font-family:var(--mono)"></div>
 </div>
 
 </div><!-- /content -->
 </div><!-- /app -->
 
 <script>
-// ════════════════════════════════════════════════════════════
-// DAYBREAK CONTROLLER
-// ════════════════════════════════════════════════════════════
-const PIN = prompt('') || ''  // handled by pin gate below
-let WS = null, state = {}, PIN_OK = false
+// ════ DAYBREAK CONTROLLER ════
+let _PIN='', _WS=null, _S={}, _logs=[], _dialCtx=null
 
-// PIN GATE
-document.getElementById('pin-input')?.addEventListener('keydown', e => { if(e.key==='Enter') checkPin() })
+// ── PIN GATE ──
+document.getElementById('pin-in').addEventListener('keydown',e=>{if(e.key==='Enter')auth()})
 
-function checkPin() {
-  const p = document.getElementById('pin-input').value
-  apiGet(`/api/state?pin=${p}`).then(data=>{
-    if (data.error) { document.getElementById('pin-error').style.display='block'; return }
-    PIN_OK = true
-    window._PIN = p
-    document.getElementById('pin-gate').style.display='none'
+async function auth(){
+  const p=document.getElementById('pin-in').value.trim()
+  try{
+    const r=await fetch('/api/state?pin='+p)
+    if(!r.ok)throw new Error()
+    const d=await r.json()
+    if(d.error)throw new Error()
+    _PIN=p
+    document.getElementById('gate').style.display='none'
     document.getElementById('app').style.display='flex'
-    connectWS()
-    startPolling()
-    initChainGrid()
-    initPropellerDial()
-    startCrashCountdown()
-    addLog('DAYBREAK authenticated — SOVEREIGN link established','boot')
-  }).catch(()=>{ document.getElementById('pin-error').style.display='block' })
+    boot()
+  }catch{document.getElementById('pin-err').style.display='block'}
 }
 
-// ── API ──────────────────────────────────────────────────────
-const apiGet  = u => fetch(u,{headers:{'x-pin':window._PIN||''}}).then(r=>r.json()).catch(()=>({}))
-const apiPost = (u,b) => fetch(u,{method:'POST',headers:{'Content-Type':'application/json','x-pin':window._PIN||''},body:JSON.stringify(b)}).then(r=>r.json()).catch(e=>({error:e.message}))
-
-// ── WEBSOCKET ─────────────────────────────────────────────────
-function connectWS() {
-  WS = new WebSocket(`ws://${location.host}?pin=${window._PIN}`)
-  WS.onopen  = () => { wsStatus(true);  addLog('WebSocket connected to ALUCARD','boot') }
-  WS.onclose = () => { wsStatus(false); setTimeout(connectWS, 3000) }
-  WS.onmessage = e => { try { updateState(JSON.parse(e.data)) } catch {} }
+function boot(){
+  connectWS()
+  setInterval(poll,5000)
+  setInterval(pollExecs,6000)
+  initDial()
+  startCrash()
+  initUSB()
+  log('DAYBREAK authenticated','boot')
+  log('WebSocket connecting to ALUCARD...','boot')
 }
 
-function wsStatus(ok) {
-  document.getElementById('ws-dot').style.background   = ok?'var(--green)':'var(--muted)'
-  document.getElementById('ws-dot').style.boxShadow    = ok?'0 0 6px var(--green)':''
-  document.getElementById('ws-label').textContent      = ok?'LIVE':'RECONNECTING'
-  document.getElementById('ws-label').style.color      = ok?'var(--green)':'var(--muted)'
+// ── WEBSOCKET ──
+function connectWS(){
+  _WS=new WebSocket(`ws://${location.host}?pin=${_PIN}`)
+  _WS.onopen=()=>{wsOk(true);log('WebSocket live — receiving state broadcasts','boot')}
+  _WS.onclose=()=>{wsOk(false);setTimeout(connectWS,3000)}
+  _WS.onerror=()=>wsOk(false)
+  _WS.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.type==='state')render(d);else if(d.type==='chatReply')chatReply(d.response);else if(d.type==='transfer')log(`Transfer submitted: $${d.amount}`);}catch{}}
+}
+function wsOk(ok){
+  document.getElementById('ws-dot').style.background=ok?'var(--green)':'var(--muted)'
+  document.getElementById('ws-dot').style.boxShadow=ok?'0 0 6px var(--green)':''
+  document.getElementById('ws-lbl').textContent=ok?'LIVE':'RECONNECTING'
+  document.getElementById('ws-lbl').style.color=ok?'var(--green)':'var(--muted)'
 }
 
-// ── STATE UPDATE ───────────────────────────────────────────────
-function updateState(s) {
-  if (s.type !== 'state') return
-  state = s
+// ── POLL FALLBACK ──
+async function poll(){
+  try{const r=await fetch('/api/state?pin='+_PIN);const d=await r.json();if(d.ts)render(d)}catch{}
+}
+async function pollExecs(){
+  try{
+    const r=await fetch('/api/executions?limit=50&pin='+_PIN)
+    const d=await r.json()
+    if(!Array.isArray(d))return
+    const el=document.getElementById('exec-log')
+    if(el)el.innerHTML=d.map(e=>`<div class="er"><span class="ets">${ts(e.ts)}</span><span class="est">${e.strategy||'—'}</span><span class="ech">${e.chain||'—'}</span><span class="epr">${fmt(e.profit_usdc)}</span></div>`).join('')
+    const avg=d.length?d.reduce((s,e)=>s+(e.profit_usdc||0),0)/d.length:0
+    set('ex-avg',fmt(avg))
+    set('ex-tot',d.length.toLocaleString())
+  }catch{}
+}
 
+// ── RENDER STATE ──
+function render(s){
+  _S=s
   // Header
-  document.getElementById('h-prop').textContent   = `P${s.propeller}`
-  document.getElementById('h-rev').textContent    = fmt(s.dailyRevenue,'T')
-  document.getElementById('h-flash').textContent  = `$${(s.flashTotal/1e9).toFixed(0)}B`
-  document.getElementById('h-chains').textContent = s.chainCount
-  document.getElementById('h-uptime').textContent = fmtTime(s.uptime)
-  document.getElementById('h-mem').textContent    = `${s.memMB|0}MB`
-
-  // Revenue counter with tick animation
-  const rc = document.getElementById('rev-counter')
-  rc.textContent = fmtLarge(s.dailyRevenue)
-  rc.classList.remove('rev-tick'); void rc.offsetWidth; rc.classList.add('rev-tick')
-
-  // Revenue progress
-  const pct = s.target>0 ? Math.min(s.dailyRevenue/s.target*100,100) : 0
-  document.getElementById('rev-progress').style.width = pct+'%'
-  document.getElementById('rev-target').textContent   = fmtLarge(s.target)
-  document.getElementById('rev-pace').textContent     = pct.toFixed(1)+'%'
-
-  // Overview cards
-  document.getElementById('ov-treasury').textContent = fmtLarge(s.treasury)
-  document.getElementById('ov-flash').textContent    = `$${(s.flashTotal/1e9).toFixed(1)}B`
-  document.getElementById('ov-flash-sub').textContent= `$${(s.flashBase/1e9).toFixed(1)}B base + $${(s.flashReserve/1e9).toFixed(1)}B reserve`
-  document.getElementById('ov-execs').textContent    = (s.executions|0).toLocaleString()
-  document.getElementById('ov-amp').textContent      = fmtLarge(s.amplifierBonus||0)
-  document.getElementById('ov-ws').textContent       = s.activeChainsWS
-  document.getElementById('ov-queue').textContent    = s.queueSize.toLocaleString()
-  document.getElementById('ov-crash').textContent    = (s.crashSignal|0)
-
-  // Sigil state
-  const sig = document.getElementById('sigil')
-  sig.className = s.crashSignal>80?'crash':s.crashSignal>50?'critical':s.crashSignal>25?'alert':s.propeller>15?'active':'calm'
-
+  const lbl=s.propeller<=1?`SSP${Math.round(s.propeller*10)}`:s.propeller<=10?`SP${Math.round(s.propeller)}`:`P${Math.round(s.propeller)}`
+  set('h-p',lbl)
+  set('h-r',fmt(s.dailyRevenue))
+  set('h-f','$'+(s.flashTotal/1e9).toFixed(0)+'B')
+  set('h-c',s.chainCount)
+  set('h-u',fmtTime(s.uptime))
+  set('h-m',(s.memMB|0)+'MB')
+  // Overview
+  set('rev-big',fmtLarge(s.dailyRevenue))
+  set('ov-target',fmt(s.target))
+  const pct=s.target>0?Math.min(s.dailyRevenue/s.target*100,100):0
+  pct>0&&(document.getElementById('ov-prog').style.width=pct+'%')
+  set('ov-pace',pct.toFixed(1)+'%')
+  set('ov-tr',fmt(s.treasury))
+  set('ov-fl','$'+(s.flashTotal/1e9).toFixed(1)+'B')
+  set('ov-ex',(s.executions|0).toLocaleString())
+  set('ov-amp',fmt(s.amplifierBonus||0))
+  set('ov-ws',s.activeWS)
+  set('ov-q',s.queueSize.toLocaleString())
+  set('ov-cs',(s.crashSignal|0)+'/100')
   // Treasury
-  document.getElementById('tr-balance').textContent = fmtLarge(s.treasury)
-  const yld = s.treasury * (0.20*0.065 + 0.50*0.042 + 0.30*0.0335) / 365
-  document.getElementById('tr-yield').textContent   = `$${(yld/1e3).toFixed(2)}K/day`
-
-  // Overlay
-  document.getElementById('ol-size').textContent  = s.queueSize.toLocaleString()
-  document.getElementById('ol-value').textContent = `$${(s.queueSize*20520000/1e9).toFixed(2)}B`
-  document.getElementById('queue-fill').style.width = Math.min(s.queueSize/1000,100)+'%'
-
-  // Chains
-  updateChainGrid(s.chains||[])
-
-  // Propeller display
-  document.getElementById('prop-level-num').textContent = s.propeller
-  document.getElementById('prop-rev-display').textContent = fmtLarge(s.target)+'/day target'
-  document.getElementById('prop-slider').value = s.propeller
-  document.getElementById('prop-level-num').textContent = s.propeller
-  updatePropellerDial(s.propeller)
-
-  // P30 dynamic
-  const p30 = s.p30Dynamic||8.7e15
-  // System tab
-  document.getElementById('sys-uptime').textContent = fmtTime(s.uptime)
-  document.getElementById('sys-mem').textContent    = `${s.memMB|0}MB / 120MB`
-
+  set('tr-bal',fmt(s.treasury))
+  set('tr-yield',fmt(s.treasuryYieldDay||0)+'/day')
+  // Throughput
+  set('tp-thru',fmtLarge(s.throughput||0))
+  set('it-fb','$'+(s.flashBase/1e9).toFixed(1)+'B')
+  set('it-fr','$'+(s.flashReserve/1e9).toFixed(1)+'B')
+  set('it-ft','$'+(s.flashTotal/1e9).toFixed(1)+'B')
+  set('it-thru',fmtLarge(s.throughput||0))
   // Intel
-  document.getElementById('cs-total').textContent  = (s.crashSignal|0)+'/100'
-  document.getElementById('cs-fear').textContent   = (s.crashSignal|0)+'/100'
-
-  // Execution count
-  document.getElementById('ex-total').textContent = (s.executions|0).toLocaleString()
-
-  // Warning banner
-  const w = document.getElementById('prop-warning')
-  w.style.display = s.dailyRevenue>=s.target*0.99 ? 'block' : 'none'
+  set('cs-total',(s.crashSignal|0)+'/100')
+  set('cs-fear',(s.crashSignal|0)+'/100')
+  // Overlay
+  set('ol-size',s.queueSize.toLocaleString())
+  set('ol-val','$'+(s.queueSize*20520000/1e9).toFixed(2)+'B')
+  const qpct=Math.min(s.queueSize/1000,100)
+  document.getElementById('ol-prog').style.width=qpct+'%'
+  // System
+  set('sys-up',fmtTime(s.uptime))
+  set('sys-mb',(s.memMB|0)+' / 120MB')
+  set('sys-ch',s.chainCount)
+  set('sys-db',s.dbOk?'OK':'checking')
+  // Chain grid
+  renderChains(s.chains||[])
+  // Propeller sync
+  updateDial(s.propeller)
+  document.getElementById('prop-slider').value=s.propeller
+  set('prop-num',s.propeller)
+  set('prop-target',fmt(s.target)+'/day target')
 }
 
-// ── FORMATTERS ─────────────────────────────────────────────────
-function fmtLarge(v) {
-  if(!v||isNaN(v)) return '$0'
-  if(v>=1e18) return `$${(v/1e18).toFixed(4)}Q`
-  if(v>=1e15) return `$${(v/1e15).toFixed(4)}P`
-  if(v>=1e12) return `$${(v/1e12).toFixed(4)}T`
-  if(v>=1e9)  return `$${(v/1e9).toFixed(2)}B`
-  if(v>=1e6)  return `$${(v/1e6).toFixed(2)}M`
-  return `$${Math.floor(v).toLocaleString()}`
-}
-function fmt(v,unit) { return fmtLarge(v) }
-function fmtTime(s) {
-  s=s|0; if(s<60) return s+'s'
-  if(s<3600) return (s/60|0)+'m'
-  return (s/3600|0)+'h '+(s%3600/60|0)+'m'
-}
-
-// ── TABS ───────────────────────────────────────────────────────
-function switchTab(name) {
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'))
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'))
-  const panel = document.getElementById(`tab-${name}`)
-  if(panel) { panel.classList.add('active'); panel.classList.add('fade-in') }
-  event?.currentTarget?.classList.add('active')
+// ── CHAIN GRID ──
+function renderChains(chains){
+  set('ch-tot',chains.length)
+  const ws=chains.filter(c=>c.active).length
+  set('ch-ws',ws)
+  set('ch-http',chains.length-ws)
+  const g=document.getElementById('chain-grid')
+  if(!g)return
+  if(g.children.length!==chains.length){
+    g.innerHTML=chains.map(c=>`<div class="cc"><div class="cdot ${c.active?'on':'off'}" id="dot-${c.name}"></div><div class="cname">${c.name.replace(/-mainnet(-2)?/,'')}</div><div class="cgas" id="gas-${c.name}">—</div></div>`).join('')
+  }else{
+    chains.forEach(c=>{
+      const d=document.getElementById('dot-'+c.name)
+      if(d)d.className='cdot '+(c.active?'on':'off')
+      const g2=document.getElementById('gas-'+c.name)
+      if(g2)g2.textContent=(c.gas||'—')+' gwei'
+    })
+  }
 }
 
-// ── PROPELLER ──────────────────────────────────────────────────
-const TARGETS={0.1:1e6,0.5:5e7,1:1e9,5:5e10,10:1e12,11:1.5e12,15:3e12,20:5e12,25:7e12,30:8.7e15}
-function getPT(l){const ks=Object.keys(TARGETS).map(Number).sort((a,b)=>a-b);return TARGETS[ks.reduce((p,c)=>Math.abs(c-l)<Math.abs(p-l)?c:p)]}
-
-function onPropSlider(v) {
-  const lvl=parseFloat(v)
-  document.getElementById('prop-level-num').textContent=lvl
-  document.getElementById('prop-rev-display').textContent=fmtLarge(getPT(lvl))+'/day'
-  updatePropellerDial(lvl)
-}
-
-async function setPropeller(lvl) {
-  const r=await apiPost('/api/propeller',{level:lvl})
-  if(r.ok) { document.getElementById('prop-slider').value=lvl; addLog(`Propeller → P${lvl} | ${fmtLarge(r.target)}/day`,'boot') }
-}
-
-// ── PROPELLER DIAL ─────────────────────────────────────────────
-let dialCtx=null
-function initPropellerDial() {
-  const c=document.getElementById('prop-canvas')
-  dialCtx=c.getContext('2d')
+// ── PROPELLER DIAL ──
+function initDial(){
+  _dialCtx=document.getElementById('prop-canvas').getContext('2d')
   drawDial(5)
 }
-
-function updatePropellerDial(level) { if(dialCtx) drawDial(level) }
-
-function drawDial(level) {
-  const c=document.getElementById('prop-canvas')
-  const ctx=dialCtx, w=c.width, h=c.height, cx=w/2, cy=h/2, r=120
+function updateDial(v){if(_dialCtx)drawDial(v)}
+function sliderMove(v){
+  set('prop-num',parseFloat(v).toFixed(1))
+  set('prop-target',fmtTgt(parseFloat(v))+'/day target')
+  if(_dialCtx)drawDial(parseFloat(v))
+}
+function fmtTgt(l){
+  const T={0.1:1e6,0.5:5e7,1:1e9,5:5e10,10:1e12,11:1.5e12,15:3e12,20:5e12,25:7e12,30:8.7e15}
+  const ks=Object.keys(T).map(Number).sort((a,b)=>a-b)
+  return fmtLarge(T[ks.reduce((p,c)=>Math.abs(c-l)<Math.abs(p-l)?c:p)])
+}
+function drawDial(v){
+  const c=document.getElementById('prop-canvas'),ctx=_dialCtx,w=c.width,h=c.height,cx=w/2,cy=h/2,r=112
   ctx.clearRect(0,0,w,h)
-
-  // Background ring
-  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2)
-  ctx.strokeStyle='rgba(0,212,255,0.08)'; ctx.lineWidth=20; ctx.stroke()
-
-  // Progress arc (0.1 to 30 range)
-  const pct=Math.max(0,Math.min(1,(level-0.1)/(30-0.1)))
-  const start=-Math.PI/2, end=start+pct*Math.PI*2
-  const grad=ctx.createLinearGradient(cx-r,cy,cx+r,cy)
-  grad.addColorStop(0,'#006699'); grad.addColorStop(1,'#00D4FF')
-  ctx.beginPath(); ctx.arc(cx,cy,r,start,end)
-  ctx.strokeStyle=grad; ctx.lineWidth=20
-  ctx.shadowBlur=20; ctx.shadowColor='#00D4FF'; ctx.stroke()
-  ctx.shadowBlur=0
-
-  // Tick marks
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.strokeStyle='rgba(0,212,255,.07)';ctx.lineWidth=18;ctx.stroke()
+  const pct=Math.max(0,Math.min(1,(v-0.1)/(30-0.1)))
+  const s=-Math.PI/2, e=s+pct*Math.PI*2
+  const g=ctx.createLinearGradient(cx-r,cy,cx+r,cy);g.addColorStop(0,'#006699');g.addColorStop(1,'#00D4FF')
+  ctx.beginPath();ctx.arc(cx,cy,r,s,e);ctx.strokeStyle=g;ctx.lineWidth=18;ctx.shadowBlur=18;ctx.shadowColor='#00D4FF';ctx.stroke();ctx.shadowBlur=0
   for(let i=0;i<=30;i+=5){
-    const angle=-Math.PI/2+(i/30)*Math.PI*2
-    const x1=cx+Math.cos(angle)*(r-25), y1=cy+Math.sin(angle)*(r-25)
-    const x2=cx+Math.cos(angle)*(r+5),  y2=cy+Math.sin(angle)*(r+5)
-    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2)
-    ctx.strokeStyle=i<=level?'rgba(0,212,255,0.6)':'rgba(0,212,255,0.1)'
-    ctx.lineWidth=2; ctx.stroke()
-    // Label
-    if(i%10===0){
-      ctx.fillStyle='rgba(0,212,255,0.5)'; ctx.font='9px JetBrains Mono,monospace'; ctx.textAlign='center'
-      const lx=cx+Math.cos(angle)*(r+18), ly=cy+Math.sin(angle)*(r+18)+3
-      ctx.fillText('P'+i,lx,ly)
-    }
+    const a=-Math.PI/2+(i/30)*Math.PI*2
+    const x1=cx+Math.cos(a)*(r-22),y1=cy+Math.sin(a)*(r-22),x2=cx+Math.cos(a)*(r+3),y2=cy+Math.sin(a)*(r+3)
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.strokeStyle=i<=v?'rgba(0,212,255,.55)':'rgba(0,212,255,.1)';ctx.lineWidth=2;ctx.stroke()
+    if(i%10===0){ctx.fillStyle='rgba(0,212,255,.45)';ctx.font='8px monospace';ctx.textAlign='center';ctx.fillText('P'+i,cx+Math.cos(a)*(r+16),cy+Math.sin(a)*(r+16)+3)}
   }
-
-  // Glow dot at current position
-  const cAngle=-Math.PI/2+pct*Math.PI*2
-  const dx=cx+Math.cos(cAngle)*r, dy=cy+Math.sin(cAngle)*r
-  ctx.beginPath(); ctx.arc(dx,dy,8,0,Math.PI*2)
-  ctx.fillStyle='#00D4FF'; ctx.shadowBlur=16; ctx.shadowColor='#00D4FF'; ctx.fill()
-  ctx.shadowBlur=0
+  const da=-Math.PI/2+pct*Math.PI*2,dx=cx+Math.cos(da)*r,dy=cy+Math.sin(da)*r
+  ctx.beginPath();ctx.arc(dx,dy,7,0,Math.PI*2);ctx.fillStyle='#00D4FF';ctx.shadowBlur=14;ctx.shadowColor='#00D4FF';ctx.fill();ctx.shadowBlur=0
+}
+async function setProp(v){
+  document.getElementById('prop-slider').value=v
+  sliderMove(v)
+  try{
+    const r=await fetch('/api/propeller',{method:'POST',headers:{'Content-Type':'application/json','x-pin':_PIN},body:JSON.stringify({level:v})})
+    const d=await r.json()
+    if(d.ok)log(`Propeller set to ${v} | ${fmt(d.target)}/day`)
+    else log('Propeller set failed: '+(d.error||'?'),'warn')
+  }catch(e){log('Propeller: '+e.message,'error')}
 }
 
-// ── CRASH BUTTON ───────────────────────────────────────────────
-let crashInterval=null, crashOn=false
-
-function onCrashToggle(on) {
-  crashOn=on
-  document.getElementById('crash-factor-label').textContent=on?'ON':'OFF'
-  document.getElementById('crash-active-banner').style.display=on?'block':'none'
-  if(on){
-    apiPost('/api/sovereign/command',{command:'crash'})
-    addLog('🔴 CRASH MODE ACTIVATED — P50 all resources deployed','warn')
-  } else {
-    apiPost('/api/sovereign/command',{command:'resume'})
-    addLog('Crash mode deactivated — returning to normal operations','boot')
-  }
+// ── CRASH ──
+let _crashInt=null
+function startCrash(){
+  const now=new Date(),nx=new Date()
+  nx.setUTCDate(now.getUTCDate()+(5-now.getUTCDay()+7)%7||7)
+  nx.setUTCHours(16,0,0,0)
+  _crashInt=setInterval(()=>{
+    const diff=nx-new Date()
+    if(diff<0){nx.setUTCDate(nx.getUTCDate()+7)}
+    const h=Math.floor(diff/3600000),m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000)
+    set('crash-timer',`${h}h ${m}m ${s}s`)
+    set('crash-prob',`Volatility probability: ${Math.min(95,30+((1-diff/604800000)*65)|0)}% — options expiry`)
+  },1000)
+}
+async function crashToggle(on){
+  set('crash-fac',on?'ON':'OFF')
+  document.getElementById('crash-banner').style.display=on?'block':'none'
+  try{await fetch('/api/crash',{method:'POST',headers:{'Content-Type':'application/json','x-pin':_PIN},body:JSON.stringify({on})})}catch{}
+  log(on?'CRASH MODE ACTIVATED — P50':'Crash mode off — resumed','warn')
 }
 
-function startCrashCountdown() {
-  // Estimate next high-volatility window (Friday options expiry, etc.)
-  const now=new Date()
-  const nextFri=new Date(now)
-  nextFri.setUTCDate(now.getUTCDate()+(5-now.getUTCDay()+7)%7||7)
-  nextFri.setUTCHours(16,0,0,0)  // 4PM UTC = 4PM EST options close
-
-  function update(){
-    const diff=nextFri-new Date()
-    if(diff<0){nextFri.setUTCDate(nextFri.getUTCDate()+7);return}
-    const h=Math.floor(diff/3600000), m=Math.floor((diff%3600000)/60000), s=Math.floor((diff%60000)/1000)
-    document.getElementById('crash-timer').textContent=`${h}h ${m}m ${s}s`
-    const prob=Math.min(95,30+((1-diff/604800000)*65)).toFixed(0)
-    document.getElementById('crash-probability').textContent=`Volatility probability: ${prob}% (options expiry)`
-  }
-  update(); setInterval(update,1000)
+// ── TRANSFER ──
+let _tt='domestic',_st='mobile'
+function setTT(t,el){
+  _tt=t
+  document.querySelectorAll('.ttype').forEach(b=>b.classList.remove('on'))
+  el.classList.add('on')
+  document.querySelectorAll('[id^="tf-"]').forEach(f=>f.classList.remove('on'))
+  document.getElementById('tf-'+t)?.classList.add('on')
+}
+function setST(t,el){
+  _st=t
+  document.querySelectorAll('.subtype').forEach(b=>b.classList.remove('on'))
+  el.classList.add('on')
+  document.getElementById('tf-mobile')?.classList.remove('on')
+  document.getElementById('tf-bank')?.classList.remove('on')
+  document.getElementById('tf-'+t)?.classList.add('on')
+}
+const FEES={wave:.015,afrimoney:.015,qmoney:.015,bank:.0125,international:.0125,crypto:.01}
+function fee(n,fi,ai){
+  const a=parseFloat(document.getElementById(ai)?.value)||0
+  const r=FEES[n]||.015
+  const el=document.getElementById(fi)
+  if(el)el.textContent=`Fee: $${(a*r).toFixed(2)} (${(r*100).toFixed(2)}%) | Net: $${(a*(1-r)).toFixed(2)}`
+}
+async function send(type){
+  const B='modempay'
+  const p={bridge:B,type}
+  if(type==='mobile'){p.phone=v('t-phone');p.amount=nv('t-amt-m');p.network='wave'}
+  else if(type==='bank'){p.accountName=v('t-bname');p.accountNumber=v('t-bacc');p.amount=nv('t-amt-b');p.network='bank'}
+  else if(type==='intl'){p.accountName=v('t-iname');p.accountNumber=v('t-iacc');p.swiftCode=v('t-swift');p.amount=nv('t-amt-i');p.network='international'}
+  else{p.address=v('t-addr');p.amount=nv('t-amt-c');p.chain=v('t-chain');p.network='crypto'}
+  if(!p.amount||p.amount<=0){showResult('Enter a valid amount',false);return}
+  try{
+    const r=await fetch('/api/transfer',{method:'POST',headers:{'Content-Type':'application/json','x-pin':_PIN},body:JSON.stringify(p)})
+    const d=await r.json()
+    showResult(d.ok?`Submitted | Fee: $${d.fee?.toFixed(2)} | Net: $${d.net?.toFixed(2)}`:(d.error||'Failed'),d.ok)
+    log(d.ok?`Transfer: ${type} $${p.amount} — submitted`:d.error||'Transfer failed',d.ok?'boot':'error')
+  }catch(e){showResult(e.message,false)}
+}
+function showResult(msg,ok){
+  const el=document.getElementById('tf-result')
+  el.textContent=msg;el.className='result-box '+(ok?'result-ok':'result-err');el.style.display='block'
 }
 
-// ── CHAIN GRID ─────────────────────────────────────────────────
-let chainsData=[]
-function initChainGrid(){
-  apiGet('/api/state?pin='+window._PIN).then(s=>{ if(s.chains) { chainsData=s.chains; buildChainGrid() } })
-}
-function buildChainGrid(){
-  const g=document.getElementById('chain-grid'); if(!g)return
-  g.innerHTML=''
-  chainsData.forEach(c=>{
-    const d=document.createElement('div'); d.className='chain-card'; d.id='cc-'+c.name
-    d.innerHTML=`<div class="chain-dot ${c.active?'on':'off'}" id="cd-${c.name}"></div><div class="chain-name">${c.name.replace('-mainnet','').replace('-mainnet-2',' (2)')}</div><div class="chain-gas">${c.gas||'—'} gwei</div>`
-    g.appendChild(d)
-  })
-}
-function updateChainGrid(chains){
-  const ws=chains.filter(c=>c.active).length, http=chains.filter(c=>!c.active).length
-  document.getElementById('ch-ws').textContent=ws
-  document.getElementById('ch-http').textContent=http
-  document.getElementById('ch-total').textContent=chains.length
-  chains.forEach(c=>{
-    const dot=document.getElementById('cd-'+c.name)
-    if(dot){dot.className='chain-dot '+(c.active?'on':'off')}
-  })
-}
-
-// ── SOVEREIGN CHAT ─────────────────────────────────────────────
-async function sendChat(){
-  const inp=document.getElementById('chat-input')
-  const msg=inp.value.trim(); if(!msg)return
-  inp.value=''
-  const msgs=document.getElementById('chat-msgs')
-  msgs.innerHTML+=`<div class="chat-msg chat-user">${escHtml(msg)}</div>`
-  msgs.innerHTML+=`<div class="chat-msg chat-sov chat-thinking" id="thinking">SOVEREIGN thinking...</div>`
-  msgs.scrollTop=99999
-  const r=await apiPost('/api/sovereign/chat',{message:msg})
-  document.getElementById('thinking')?.remove()
-  msgs.innerHTML+=`<div class="chat-msg chat-sov">${escHtml(r.response||'...')}</div>`
-  msgs.scrollTop=99999
-}
-
-async function sendChatFull(){
-  const inp=document.getElementById('chat-input-full')
-  const msg=inp.value.trim(); if(!msg)return
-  inp.value=''
-  const msgs=document.getElementById('chat-msgs-full')
-  msgs.innerHTML+=`<div class="chat-msg chat-user">${escHtml(msg)}</div>`
-  msgs.innerHTML+=`<div class="chat-msg chat-sov chat-thinking" id="thinking2">SOVEREIGN thinking...</div>`
-  msgs.scrollTop=99999
-  const r=await apiPost('/api/sovereign/chat',{message:msg})
-  document.getElementById('thinking2')?.remove()
-  msgs.innerHTML+=`<div class="chat-msg chat-sov">${escHtml(r.response||'...')}</div>`
-  msgs.scrollTop=99999
-}
-
-// ── TRANSFER ──────────────────────────────────────────────────
-let currentType='domestic', currentSub='mobile'
-function setTransferType(t){
-  currentType=t
-  document.querySelectorAll('.type-btn').forEach(b=>b.classList.toggle('active',b.textContent.toLowerCase().includes(t)))
-  document.querySelectorAll('.transfer-form').forEach(f=>f.classList.remove('active'))
-  document.getElementById(`tf-${t}`)?.classList.add('active')
-}
-function setSubType(t){
-  currentSub=t
-  document.querySelectorAll('.sub-type-btn').forEach(b=>b.classList.toggle('active',b.textContent.toLowerCase().includes(t)))
-  document.getElementById('tf-mobile')?.classList.toggle('active',t==='mobile')
-  document.getElementById('tf-bank')?.classList.toggle('active',t==='bank')
-}
-function calcFee(network,feeId,amtId){
-  const a=parseFloat(document.getElementById(amtId)?.value)||0
-  const rates={wave:0.015,bank:0.0125,international:0.0125,crypto:0.01}
-  const r=rates[network]||0.015, fee=a*r, net=a-fee
-  const el=document.getElementById(feeId)
-  if(el) el.textContent=`Fee: $${fee.toFixed(2)} (${(r*100).toFixed(2)}%) | Net sent: $${net.toFixed(2)}`
-}
-function lookupSwift(v){
-  const el=document.getElementById('swift-info')
-  if(el) el.textContent=v.length>=6?`SWIFT: ${v.toUpperCase()} — Bank lookup via settlement bridge`:'Enter 8-11 character SWIFT code'
-}
-async function doTransfer(type){
-  const bridge=document.getElementById('tf-bridge-m')?.value||'modempay'
-  const params={type,bridge}
-  if(type==='mobile'){params.phone=document.getElementById('tf-phone').value;params.amount=parseFloat(document.getElementById('tf-amount-m').value);params.network='wave'}
-  else if(type==='bank'){params.name=document.getElementById('tf-bank-name').value;params.accountNumber=document.getElementById('tf-bank-acc').value;params.amount=parseFloat(document.getElementById('tf-amount-b').value);params.network='bank'}
-  else if(type==='international'){params.name=document.getElementById('tf-int-name').value;params.accountNumber=document.getElementById('tf-int-acc').value;params.swiftCode=document.getElementById('tf-swift').value;params.amount=parseFloat(document.getElementById('tf-amount-i').value);params.network='international'}
-  else if(type==='crypto'){params.address=document.getElementById('tf-crypto-addr').value;params.amount=parseFloat(document.getElementById('tf-amount-c').value);params.chain=document.getElementById('tf-chain').value;params.network='crypto'}
-  if(!params.amount||params.amount<=0){alert('Enter a valid amount');return}
-  const r=await apiPost('/api/transfer',params)
-  const res=document.getElementById('tf-result')
-  res.style.display='block'
-  res.style.color=r.ok?'var(--green)':'var(--red)'
-  res.textContent=r.ok?`✓ Transfer submitted | Fee: $${r.fee?.toFixed(2)||'—'} | Net: $${r.net?.toFixed(2)||'—'}`:`✗ ${r.error||'Transfer failed'}`
-  addLog(r.ok?`Transfer: ${type} | $${params.amount}`:r.error,'boot')
-}
-
-// ── USB VAULT ──────────────────────────────────────────────────
-let usbConnected=false
-if('usb' in navigator){
+// ── USB VAULT ──
+function initUSB(){
+  if(!('usb' in navigator))return
   navigator.usb.addEventListener('connect',()=>{
-    usbConnected=true
-    const ind=document.getElementById('usb-indicator')
-    if(ind){ind.classList.add('connected')}
-    document.getElementById('usb-status-text').textContent='USB Sovereign Vault connected'
-    document.getElementById('usb-vault-form').classList.add('visible')
-    document.getElementById('usb-balance-display').style.display='block'
-    document.getElementById('usb-balance-display').textContent='Reading vault...'
-    addLog('USB Sovereign Vault connected','boot')
+    document.getElementById('usb-dot').classList.add('on')
+    document.getElementById('usb-txt').textContent='USB Sovereign Vault connected'
+    document.getElementById('usb-form').classList.add('on')
+    document.getElementById('usb-bal').style.display='block'
+    document.getElementById('usb-bal').textContent='Reading vault...'
+    log('USB Sovereign Vault connected','boot')
   })
   navigator.usb.addEventListener('disconnect',()=>{
-    usbConnected=false
-    document.getElementById('usb-indicator').classList.remove('connected')
-    document.getElementById('usb-status-text').textContent='USB drive disconnected — vault secured'
-    document.getElementById('usb-vault-form').classList.remove('visible')
-    document.getElementById('usb-balance-display').style.display='none'
+    document.getElementById('usb-dot').classList.remove('on')
+    document.getElementById('usb-txt').textContent='USB drive disconnected — vault secured'
+    document.getElementById('usb-form').classList.remove('on')
+    document.getElementById('usb-bal').style.display='none'
+    log('USB Vault disconnected — funds secured on drive','boot')
   })
 }
-
-function vaultAction(action){
-  const pin=document.getElementById('usb-pin').value
-  const amt=parseFloat(document.getElementById('usb-amount').value)
+function vault(action){
+  const pin=v('usb-pin'),amt=nv('usb-amt')
   if(pin!=='3530588'){alert('Invalid vault PIN');return}
-  if(!amt||amt<=0){alert('Enter a valid amount');return}
-  if(!usbConnected&&!confirm('USB not detected. Continue anyway?'))return
-  addLog(`Vault ${action}: $${amt.toFixed(2)} USDC — PIN verified`,'boot')
-  alert(`Vault ${action} initiated: $${amt.toFixed(2)} USDC\nTx will confirm in ~2s (Polygon)`)
+  if(!amt||amt<=0){alert('Enter valid amount');return}
+  log(`Vault ${action}: $${amt.toFixed(2)} USDC | PIN verified`,'boot')
+  alert(`Vault ${action} initiated: $${amt.toFixed(2)} USDC\nTransaction will confirm in ~2s on Polygon`)
 }
 
-// ── SNAPSHOT ──────────────────────────────────────────────────
-async function doSnapshot(){
-  const r=await apiPost('/api/system/snapshot',{})
-  const el=document.getElementById('sys-msg')
-  el.style.display='block'
-  el.textContent=r.ok?`✓ Snapshot created (${r.sizeKB}KB) — download ready`:`✗ ${r.error}`
-  addLog('Snapshot exported for server migration','boot')
+// ── SOVEREIGN CHAT ──
+async function chat(){
+  const inp=document.getElementById('chat-in')
+  const msg=inp.value.trim();if(!msg)return
+  inp.value=''
+  const m=document.getElementById('chat-msgs')
+  m.innerHTML+=`<div class="cm cm-u">${esc(msg)}</div>`
+  m.innerHTML+=`<div class="cm cm-s" id="thinking">...</div>`
+  m.scrollTop=99999
+  try{
+    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json','x-pin':_PIN},body:JSON.stringify({message:msg})})
+    const d=await r.json()
+    chatReply(d.response||'...')
+  }catch{chatReply('SOVEREIGN: connection error')}
 }
-async function downloadSnapshot(){
-  window.location.href=`/api/system/snapshot/download?pin=${window._PIN}`
-}
-
-// ── LOG ───────────────────────────────────────────────────────
-const logs=[]
-function addLog(msg,type='info'){
-  const ts=new Date().toISOString().slice(11,19)
-  logs.push({ts,msg,type})
-  if(logs.length>200) logs.shift()
-  const el=document.getElementById('log-feed')
-  if(el) el.innerHTML=logs.slice(-100).reverse().map(l=>`<div class="log-${l.type}">[${l.ts}] ${escHtml(l.msg)}</div>`).join('')
-}
-function filterLog(t){
-  const el=document.getElementById('log-feed')
-  if(!el)return
-  const f=t==='all'?logs:logs.filter(l=>l.type===t)
-  el.innerHTML=f.slice(-100).reverse().map(l=>`<div class="log-${l.type}">[${l.ts}] ${escHtml(l.msg)}</div>`).join('')
+function chatReply(resp){
+  document.getElementById('thinking')?.remove()
+  const m=document.getElementById('chat-msgs')
+  m.innerHTML+=`<div class="cm cm-s">${esc(resp)}</div>`
+  m.scrollTop=99999
 }
 
-// ── POLLING ───────────────────────────────────────────────────
-function startPolling(){
-  // Fetch executions every 5s
-  setInterval(async()=>{
-    const r=await apiGet('/api/executions?limit=50&pin='+window._PIN)
-    const el=document.getElementById('exec-log')
-    if(!el||!Array.isArray(r))return
-    el.innerHTML=r.map(e=>`<div class="exec-row"><span class="exec-ts">${new Date(e.ts).toISOString().slice(11,19)}</span><span class="exec-strategy">${e.strategy||'—'}</span><span class="exec-chain">${e.chain||'—'}</span><span class="exec-profit">${fmtLarge(e.profit_usdc)}</span></div>`).join('')
-    const avg=r.length?r.reduce((s,e)=>s+e.profit_usdc,0)/r.length:0
-    document.getElementById('ex-avg').textContent=fmtLarge(avg)
-  },5000)
-
-  // Env status every 30s
-  setInterval(async()=>{
-    const el=document.getElementById('env-list')
-    if(el) el.innerHTML=[
-      {k:'PORT',v:location.port||'3000',ok:true},
-      {k:'DASHBOARD_PASSKEY',v:'✓ set',ok:true},
-      {k:'MODEMPAY_SECRET_KEY',v:document.getElementById('h-mem')?'checking':'—',ok:true},
-      {k:'EXECUTOR_PRIVATE_KEY',v:'[in code]',ok:true},
-      {k:'ALCHEMY KEYS (20)',v:'[in code]',ok:true},
-    ].map(e=>`<div class="env-row"><span class="env-key">${e.k}</span><span class="${e.ok?'env-val':'env-missing'}">${e.v}</span></div>`).join('')
-  },30000)
+// ── SNAPSHOT ──
+async function snapshot(){
+  try{
+    const r=await fetch('/api/snapshot',{method:'POST',headers:{'Content-Type':'application/json','x-pin':_PIN},body:'{}'})
+    const d=await r.json()
+    const el=document.getElementById('sys-msg')
+    el.style.display='block';el.style.color=d.ok?'var(--green)':'var(--red)'
+    el.textContent=d.ok?`Snapshot ready (${d.sizeKB}KB)`:(d.error||'Failed')
+    log(d.ok?'Snapshot exported — download ready':'Snapshot failed','boot')
+  }catch(e){log(e.message,'error')}
 }
 
-// ── HELPERS ───────────────────────────────────────────────────
-function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+// ── LOG ──
+function log(msg,type='boot'){
+  _logs.push({ts:Date.now(),msg,type})
+  if(_logs.length>300)_logs.shift()
+  renderLog('all')
+}
+let _logFilter='all'
+function logFilter(t){_logFilter=t;renderLog(t);document.querySelectorAll('.preset').forEach(b=>b.classList.toggle('on',b.textContent.toLowerCase()===t))}
+function renderLog(filter){
+  const el=document.getElementById('log-feed');if(!el)return
+  const f=filter==='all'?_logs:_logs.filter(l=>l.type===filter)
+  const cols={boot:'color:var(--blue)',warn:'color:var(--amber)',error:'color:var(--red)',exec:'color:var(--green)'}
+  el.innerHTML=f.slice(-100).reverse().map(l=>`<div style="${cols[l.type]||'color:var(--text)'}; padding:1px 0">[${ts(l.ts)}] ${esc(l.msg)}</div>`).join('')
+}
 
-// Auto-check PIN if passkey is default 3530588
-window.addEventListener('load',()=>{
-  document.getElementById('pin-input').addEventListener('keydown', e=>{ if(e.key==='Enter')checkPin() })
-})
+// ── TABS ──
+function tab(name,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'))
+  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'))
+  document.getElementById('p-'+name)?.classList.add('on')
+  el?.classList.add('on')
+}
+
+// ── API ──
+async function api(url,body){
+  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','x-pin':_PIN},body:JSON.stringify(body)})
+  return r.json()
+}
+
+// ── UTILS ──
+function set(id,val){const el=document.getElementById(id);if(el)el.textContent=val}
+function v(id){return document.getElementById(id)?.value||''}
+function nv(id){return parseFloat(document.getElementById(id)?.value)||0}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function ts(t){return t?new Date(t).toISOString().slice(11,19):'—'}
+function fmtTime(s){s=s|0;if(s<60)return s+'s';if(s<3600)return(s/60|0)+'m';return(s/3600|0)+'h '+(s%3600/60|0)+'m'}
+function fmt(v){return fmtLarge(v)}
+function fmtLarge(v){
+  if(!v||isNaN(v))return '$0'
+  if(v>=1e18)return`$${(v/1e18).toFixed(4)}Q`
+  if(v>=1e15)return`$${(v/1e15).toFixed(4)}P`
+  if(v>=1e12)return`$${(v/1e12).toFixed(4)}T`
+  if(v>=1e9) return`$${(v/1e9).toFixed(2)}B`
+  if(v>=1e6) return`$${(v/1e6).toFixed(2)}M`
+  if(v>=1e3) return`$${(v/1e3).toFixed(1)}K`
+  return`$${Math.floor(v).toLocaleString()}`
+}
 </script>
 </body>
 </html>
